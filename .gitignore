@@ -1,0 +1,22 @@
+.DS_Store
+node_modules/
+
+# React Router
+/.react-router/
+/build/
+
+# Environment (only the example is committed)
+.env*
+!.env.example
+
+# Supabase local
+supabase/.temp
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+
+# Agent tooling
+.superpowers/
+.claude/worktrees/

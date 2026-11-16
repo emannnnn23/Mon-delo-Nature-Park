@@ -1,0 +1,11 @@
+node_modules/
+build/
+.react-router/
+coverage/
+playwright-report/
+test-results/
+supabase/.temp/
+.superpowers/
+.claude/
+docs/
+package-lock.json

@@ -8,6 +8,12 @@ alter default privileges in schema public revoke all on tables from anon, authen
 alter default privileges in schema public revoke all on functions from anon, authenticated;
 alter default privileges in schema public revoke all on sequences from anon, authenticated;
 
+-- Postgres grants EXECUTE on new functions to PUBLIC by default, and the
+-- schema-level revokes above cannot remove that. Revoke it globally (for
+-- functions created by the migration role) so a function that forgets its own
+-- revoke is still not callable by everyone through /rpc.
+alter default privileges revoke execute on functions from public;
+
 -- Shared trigger function: keeps updated_at current.
 create function public.set_updated_at()
 returns trigger

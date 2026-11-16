@@ -193,7 +193,7 @@ frame-src https://www.google.com; base-uri 'self'; form-action 'self'; object-sr
 
   - `style-src 'unsafe-inline'` is allowed: React style attributes such as `objectPosition` need it, and the risk is low.
   - `frame-ancestors` cannot be set in a meta tag; it goes in the `vercel.json` header.
-- Produces: `injectCsp(html: string, supabaseUrl: string): string`. It hashes (SHA-256, base64) every inline `<script>` body, including `type="application/ld+json"` (harmless), and inserts the `<meta http-equiv="Content-Security-Policy" content="…">` as the first child of `<head>`. The CLI rewrites every `.html` file under `build/client`. Without `VITE_SUPABASE_URL` it uses `http://127.0.0.1:54321`.
+- Produces: `injectCsp(html: string, supabaseUrl: string): string`. It hashes (SHA-256, base64) every inline `<script>` body, including `type="application/ld+json"` (harmless), and inserts the `<meta http-equiv="Content-Security-Policy" content="…">` as the first child of `<head>`. The CLI rewrites every `.html` file under `build/client`. Without `VITE_SUPABASE_URL` it uses `http://127.0.0.1:55321`.
 - Produces: `vercel.json`
   - `"rewrites": [{ "source": "/admin/:path*", "destination": "/__spa-fallback.html" }, { "source": "/discover/:slug", "destination": "/__spa-fallback.html" }]`. Use the fallback filename recorded by the spike. Pre-rendered files take precedence over rewrites on Vercel; confirm this in Phase 5 Task 5.
   - `"headers"`: for all paths, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and `Content-Security-Policy: frame-ancestors 'none'`. For `/assets/(.*)`: `Cache-Control: public, max-age=31536000, immutable`.

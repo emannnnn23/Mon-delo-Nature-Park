@@ -53,3 +53,12 @@ where id = (select id from auth.users where email = '<email>');
 ```
 
 This removes CMS access immediately. To also remove the login itself, go to **Authentication** → **Users**, open the user's menu and choose **Delete user**.
+
+## 6. Verify after `supabase db push`
+
+Run these once after the developer pushes the migrations to the project.
+
+1. In **SQL Editor**, run `select park_name, address_line from public.site_settings;`. Expected: exactly 1 row. The migration creates it; if it is missing, the push did not finish.
+2. For the demo content (sample sections, experiences, attractions and gallery categories), run the contents of `supabase/seed.sql` once in the **SQL Editor**. Do not run it twice: it inserts rows.
+3. Open **Advisors** → **Security Advisor**. These warnings are expected and accepted: `public.is_admin` and `public.submit_contact_message` are security-definer functions executable by anon/authenticated. `is_admin` runs inside the public read policies, and the contact function is the only public write path. Any other warning needs a look.
+4. Check ownership with `select tablename, tableowner from pg_tables where schemaname = 'public';`. Every table should be owned by `postgres`, and so should the functions (`select proname, proowner::regrole from pg_proc where pronamespace = 'public'::regnamespace;`).

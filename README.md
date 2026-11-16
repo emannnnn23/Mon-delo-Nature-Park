@@ -1,6 +1,6 @@
 # Mondelos Nature Park
 
-Website for Mondelos Nature Park in Kawayan, Biliran, Philippines. A statically prerendered single-page app built with React Router v7 (framework mode, `ssr: false`), Tailwind CSS 4 and Supabase.
+Website for Mondelos Nature Park in Kawayan, Biliran, Philippines. A statically prerendered single-page app built with React Router v8 (framework mode, `ssr: false`), Tailwind CSS 4 and Supabase.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ Website for Mondelos Nature Park in Kawayan, Biliran, Philippines. A statically 
 
 ```sh
 npm install
-cp .env.example .env.local   # then fill in the two VITE_SUPABASE_* values
+cp .env.example .env         # then fill in the two VITE_SUPABASE_* values
 ```
 
 ## Scripts

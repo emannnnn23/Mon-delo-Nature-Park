@@ -20,7 +20,7 @@ Versions tested: react-router 8.5.1, @react-router/dev 8.5.1, vite 8.3.8, react 
 | (b) | `serverLoader()` inside `clientLoader`: works on pre-rendered, fails on non-pre-rendered | PASS (behaves as expected; failure is a catchable `Error`)  |
 | -   | Vercel hosting behaviour (see Hosting notes)                                       | PENDING, Phase 5 Task 5. Check 6.3 was validated only under a catch-all host; on Vercel the narrow `/discover/:slug` rewrite must serve late-published slugs, and other unknown paths must give a real 404 |
 
-GATE outcome: gate passed via variant 4b (clientLoader-only detail route builds with zero slugs; 4c, loader plus at least one slug, also builds). The zero-slug decision is open for Phase 4. Controller ruling: use loader + clientLoader when at least one published slug exists; when the build-time slug list is empty, `routes.ts` registers the clientLoader-only detail module; Phase 4 adds a zero-slug build test (see "Zero-slug constraint").
+GATE outcome: gate passed via variant 4b (clientLoader-only detail route builds with zero slugs; 4c, loader plus at least one slug, also builds). The zero-slug decision is decided by ruling R13 (see below); the untested glue is verified in Phase 4. Controller ruling: use loader + clientLoader when at least one published slug exists; when the build-time slug list is empty, `routes.ts` registers the clientLoader-only detail module; Phase 4 adds a zero-slug build test (see "Zero-slug constraint").
 
 ## Documentation and source consulted
 

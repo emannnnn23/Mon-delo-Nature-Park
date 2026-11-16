@@ -42,7 +42,7 @@ Local Supabase runs as project `mondelos` on ports 553xx (API 55321, DB 55322). 
 | Never invent facilities, prices, hours, capacities, names, reviews or reviewers.                                                                                                                          | The site must be honest. Unconfirmed content is seeded `is_sample = true`.                              |
 | Testimonials, contact details, opening hours and social links are never sampled; hide them when unknown.                                                                                                  | A made-up phone number or review is a false claim about a real business.                                |
 | Enable RLS in the migration that creates each table. Never disable it.                                                                                                                                    | A table without RLS is open to every client key.                                                        |
-| Each migration starts with `revoke all ... from anon, authenticated`, then grants explicitly.                                                                                                             | Nothing relies on Supabase defaults.                                                                    |
+| Each migration revokes all from anon/authenticated right after creating each table, then grants explicitly.                                                                                               | Nothing relies on Supabase defaults.                                                                    |
 | Functions are not executable by PUBLIC by default: grant `execute` explicitly.                                                                                                                            | Postgres grants execute to PUBLIC unless revoked; a missed grant silently breaks or exposes a function. |
 | One policy per operation (select, insert, update, delete), each naming its roles. Writes have both `using` and `with check`. No `for all`, no `using (true)` on writes.                                   | Small, reviewable policies; pgTAP asserts the exact policy set.                                         |
 | `security definer` functions use `set search_path = ''` and fully qualified names.                                                                                                                        | Prevents search-path hijacking.                                                                         |
@@ -50,18 +50,21 @@ Local Supabase runs as project `mondelos` on ports 553xx (API 55321, DB 55322). 
 | Migrations: `supabase/migrations/20261117000NNN_<concern>.sql`, one concern per file. pgTAP: `supabase/tests/NNNNN_<concern>.test.sql`.                                                                   | Keeps order and review simple.                                                                          |
 | Locally run typecheck, lint and only the tests for files you touched. Never leave a dev or static server running.                                                                                         | Keeps this machine light; CI runs the full suite.                                                       |
 | Never run `supabase login`, `supabase link` or `supabase db push`. The developer does.                                                                                                                    | They touch the remote project.                                                                          |
+| Never run `supabase test db --remote`.                                                                                                                                                                    | The test helpers persist in the database.                                                               |
+| Security Advisor may warn that `public.is_admin` and `public.submit_contact_message` are security-definer functions executable by anon/authenticated. This is deliberate and accepted.                    | `is_admin` runs inside the anon read policies; the contact RPC is the only public write path.           |
 | Branch fresh for each change; never force-push; never commit to `main`. The developer merges pull requests.                                                                                               | The developer decides what ships.                                                                       |
 | Conventional commit prefixes (`feat:`, `fix:`, `docs:`...). No AI attribution in commits, pull requests or code comments: no `Co-Authored-By` naming an AI, no "Generated with" line.                     | Commits are the developer's record.                                                                     |
 | No extra runtime dependency without stating why in the report. No Framer Motion.                                                                                                                          | Keeps the bundle small.                                                                                 |
 
 ## Imitate
 
-| Writing                                   | Copy the shape of                                |
-| ----------------------------------------- | ------------------------------------------------ |
-| A migration with RLS, grants and policies | `supabase/migrations/20261117000006_contact.sql` |
-| A pgTAP test                              | `supabase/tests/00060_contact.test.sql`          |
-| Seed data                                 | `supabase/seed.sql`                              |
-| A unit test                               | `src/lib/env.test.ts`                            |
+| Writing                                       | Copy the shape of                                                                         |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| A content table with RLS, grants and policies | `supabase/migrations/20261117000004_testimonials_announcements_faqs.sql`                  |
+| A pgTAP test for a content table              | `supabase/tests/00040_testimonials_announcements_faqs.test.sql`                           |
+| A security-definer RPC and its test           | `supabase/migrations/20261117000006_contact.sql`, `supabase/tests/00060_contact.test.sql` |
+| Seed data                                     | `supabase/seed.sql`                                                                       |
+| A unit test                                   | `src/lib/env.test.ts`                                                                     |
 
 ## Verify before reporting done
 

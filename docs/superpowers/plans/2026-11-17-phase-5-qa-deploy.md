@@ -36,7 +36,7 @@ Everything in [README → Global Constraints](README.md#global-constraints-apply
 
 **Interfaces:**
 - **Config:** `webServer` runs `npx serve build/client -s -l 4173`; `baseURL` is `http://localhost:4173`. Two projects: `mobile` (viewport 375×812, `hasTouch`) and `desktop` (1440×900). Chromium only.
-- **The `e2e` job:** `supabase db start` (which seeds), then build with `VITE_SUPABASE_URL=http://127.0.0.1:54321` and the local anon key printed by `supabase status -o env` (a local, non-secret key), then `npx playwright install --with-deps chromium`, then `npm run test:e2e`. Upload the `playwright-report` artifact when the job fails.
+- **The `e2e` job:** `supabase start` (which seeds; not `supabase db start`, which has no API gateway), then build with `VITE_SUPABASE_URL=http://127.0.0.1:55321` and the local anon key printed by `supabase status -o env` (a local, non-secret key; this project's API runs on port 55321), then `npx playwright install --with-deps chromium`, then `npm run test:e2e`. Upload the `playwright-report` artifact when the job fails.
 
 - [ ] **Step 1: Write the specs** in `e2e/smoke.spec.ts`:
   - The home page has the `h1` "Find Your Peace in Nature." and 4 "Sample" experience cards.

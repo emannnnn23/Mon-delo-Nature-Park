@@ -8,7 +8,7 @@ create table public.attractions (
   kind text not null check (kind in ('attraction', 'experience')),
   slug text not null unique check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   name text not null check (length(trim(name)) > 0),
-  summary text check (char_length(summary) <= 160),
+  summary text not null check (char_length(summary) between 1 and 160),
   description text,
   -- Fixed Lucide icon list; Phase 3's icon picker uses the same names.
   icon text check (icon in (
@@ -21,7 +21,10 @@ create table public.attractions (
   sort_order integer not null default 0,
   is_sample boolean not null default false,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- Experience cards are icon cards; attractions may use a cover image instead.
+  constraint attractions_experience_icon_check
+    check (kind <> 'experience' or icon is not null)
 );
 
 create index attractions_is_published_sort_order_idx

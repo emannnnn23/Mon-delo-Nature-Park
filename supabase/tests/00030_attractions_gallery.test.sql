@@ -1,5 +1,5 @@
 begin;
-select plan(68);
+select plan(72);
 
 select policies_are(
   'public', 'attractions',
@@ -83,12 +83,12 @@ values
 
 -- Constraints (as postgres)
 select throws_ok(
-  $q$insert into public.attractions (kind, slug, name) values ('attraction', 'Bad Slug', 'x')$q$,
+  $q$insert into public.attractions (kind, slug, name, summary) values ('attraction', 'Bad Slug', 'x', 's')$q$,
   '23514', null, 'attraction slug must be lowercase kebab-case'
 );
 select throws_ok(
-  $q$insert into public.attractions (kind, slug, name, icon)
-     values ('attraction', 'rocket-spot', 'x', 'rocket')$q$,
+  $q$insert into public.attractions (kind, slug, name, summary, icon)
+     values ('attraction', 'rocket-spot', 'x', 's', 'rocket')$q$,
   '23514', null, 'icon outside the fixed Lucide list is rejected'
 );
 select throws_ok(
@@ -108,11 +108,30 @@ select lives_ok(
   'a 160-character summary is accepted'
 );
 select throws_ok(
-  $q$insert into public.attractions (kind, slug, name) values ('place', 'odd-kind', 'x')$q$,
+  $q$insert into public.attractions (kind, slug, name, summary)
+     values ('attraction', 'empty-summary', 'x', '')$q$,
+  '23514', null, 'an empty summary is rejected'
+);
+select throws_ok(
+  $q$insert into public.attractions (kind, slug, name) values ('attraction', 'no-summary', 'x')$q$,
+  '23502', null, 'a missing summary is rejected'
+);
+select throws_ok(
+  $q$insert into public.attractions (kind, slug, name, summary)
+     values ('experience', 'no-icon', 'x', 's')$q$,
+  '23514', null, 'an experience without an icon is rejected'
+);
+select lives_ok(
+  $q$insert into public.attractions (kind, slug, name, summary)
+     values ('attraction', 'no-icon-attraction', 'x', 's')$q$,
+  'an attraction without an icon is accepted'
+);
+select throws_ok(
+  $q$insert into public.attractions (kind, slug, name, summary) values ('place', 'odd-kind', 'x', 's')$q$,
   '23514', null, 'unknown kind is rejected'
 );
 select throws_ok(
-  $q$insert into public.attractions (kind, slug, name) values ('experience', 'published-spot', 'x')$q$,
+  $q$insert into public.attractions (kind, slug, name, summary, icon) values ('experience', 'published-spot', 'x', 's', 'leaf')$q$,
   '23505', null, 'duplicate attraction slug is rejected'
 );
 select throws_ok(
@@ -176,7 +195,7 @@ select ok(
 );
 
 -- Remove the rows the constraint checks created, so counts below are exact.
-delete from public.attractions where slug = 'max-summary';
+delete from public.attractions where slug in ('max-summary', 'no-icon-attraction');
 
 -- Anonymous
 select tests.as_anon();
@@ -209,7 +228,7 @@ select is(
   'anon sees only published gallery images'
 );
 select throws_ok(
-  $q$insert into public.attractions (kind, slug, name) values ('attraction', 'anon-spot', 'x')$q$,
+  $q$insert into public.attractions (kind, slug, name, summary) values ('attraction', 'anon-spot', 'x', 's')$q$,
   '42501', null, 'anon cannot insert attractions'
 );
 select throws_ok(
@@ -258,7 +277,7 @@ select is(
   'non-admin sees only published gallery images'
 );
 select throws_ok(
-  $q$insert into public.attractions (kind, slug, name) values ('attraction', 'user-spot', 'x')$q$,
+  $q$insert into public.attractions (kind, slug, name, summary) values ('attraction', 'user-spot', 'x', 's')$q$,
   '42501', null, 'non-admin cannot insert attractions'
 );
 select throws_ok(
@@ -306,8 +325,8 @@ select is((select count(*) from public.gallery_categories), 2::bigint, 'admin se
 select is((select count(*) from public.gallery_images), 2::bigint, 'admin sees every gallery image');
 
 select lives_ok(
-  $q$insert into public.attractions (id, kind, slug, name, icon, is_published)
-     values ('00000000-0000-0000-0000-0000000000d3', 'experience', 'dining', 'Dining', 'utensils', true)$q$,
+  $q$insert into public.attractions (id, kind, slug, name, summary, icon, is_published)
+     values ('00000000-0000-0000-0000-0000000000d3', 'experience', 'dining', 'Dining', 'Meals on site', 'utensils', true)$q$,
   'admin inserts an attraction'
 );
 select lives_ok(

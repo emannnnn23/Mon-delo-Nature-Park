@@ -1,14 +1,8 @@
 @import "tailwindcss";
-@import "@fontsource/playfair-display/400.css";
-@import "@fontsource/playfair-display/400-italic.css";
-@import "@fontsource/playfair-display/700.css";
-@import "@fontsource-variable/dm-sans";
 
 @theme {
-  --font-heading: "Playfair Display", ui-serif, Georgia, serif;
-  --font-sans:
-    "DM Sans Variable", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "DM Sans Variable", system-ui, sans-serif;
 
   --color-forest-900: #183f32;
   --color-forest-800: #244b3a;
@@ -22,7 +16,25 @@
   --color-ink-500: #77786f;
 }
 
-html,
-body {
-  @apply bg-ivory-50 text-ink-900;
+@layer base {
+  body {
+    @apply bg-ivory-50 font-sans text-ink-900 antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-forest-900);
+    outline-offset: 2px;
+  }
+
+  [data-surface="dark"] :focus-visible {
+    outline-color: var(--color-gold-500);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

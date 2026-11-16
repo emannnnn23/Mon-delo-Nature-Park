@@ -7,8 +7,25 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import "@fontsource-variable/dm-sans";
+import "@fontsource/playfair-display/latin-400.css";
+import "@fontsource/playfair-display/latin-400-italic.css";
+import "@fontsource/playfair-display/latin-600.css";
+import "@fontsource/playfair-display/latin-700.css";
+import playfair600Latin from "@fontsource/playfair-display/files/playfair-display-latin-600-normal.woff2?url";
+
 import type { Route } from "./+types/root";
 import "./app.css";
+
+export const links: Route.LinksFunction = () => [
+  {
+    rel: "preload",
+    href: playfair600Latin,
+    as: "font",
+    type: "font/woff2",
+    crossOrigin: "anonymous",
+  },
+];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (

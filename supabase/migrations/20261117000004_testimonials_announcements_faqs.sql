@@ -7,8 +7,8 @@
 -- testimonials ---------------------------------------------------------------
 create table public.testimonials (
   id uuid primary key default gen_random_uuid(),
-  author_name text not null check (char_length(trim(author_name)) between 2 and 100),
-  quote text not null check (char_length(trim(quote)) between 10 and 600),
+  author_name text not null check (char_length(btrim(author_name, E' \t\r\n')) between 2 and 100),
+  quote text not null check (char_length(btrim(quote, E' \t\r\n')) between 10 and 600),
   rating smallint check (rating between 1 and 5),
   source text not null check (source in ('google', 'facebook', 'direct')),
   source_url text check (source_url ~ '^https://'),
@@ -61,10 +61,10 @@ create trigger testimonials_set_updated_at
 -- Public reads need the row to be published and inside its date window.
 create table public.announcements (
   id uuid primary key default gen_random_uuid(),
-  title text not null check (char_length(trim(title)) between 2 and 120),
+  title text not null check (char_length(btrim(title, E' \t\r\n')) between 2 and 120),
   body text check (char_length(body) <= 500),
-  link_label text,
-  link_href text check (link_href ~ '^(/|https://)'),
+  link_label text check (char_length(btrim(link_label, E' \t\r\n')) > 0),
+  link_href text check (link_href ~ '^(/([^/]|$)|https://)'),
   starts_at timestamptz not null default now(),
   ends_at timestamptz,
   is_published boolean not null default false,
@@ -121,8 +121,8 @@ create trigger announcements_set_updated_at
 -- faqs -----------------------------------------------------------------------
 create table public.faqs (
   id uuid primary key default gen_random_uuid(),
-  question text not null check (char_length(trim(question)) between 5 and 200),
-  answer text not null check (char_length(trim(answer)) between 5 and 2000),
+  question text not null check (char_length(btrim(question, E' \t\r\n')) between 5 and 200),
+  answer text not null check (char_length(btrim(answer, E' \t\r\n')) between 5 and 2000),
   is_published boolean not null default false,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),

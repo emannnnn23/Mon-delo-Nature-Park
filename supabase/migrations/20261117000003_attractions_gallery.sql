@@ -7,8 +7,8 @@ create table public.attractions (
   id uuid primary key default gen_random_uuid(),
   kind text not null check (kind in ('attraction', 'experience')),
   slug text not null unique check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
-  name text not null check (length(trim(name)) > 0),
-  summary text not null check (char_length(summary) between 1 and 160),
+  name text not null check (length(btrim(name, E' \t\r\n')) > 0),
+  summary text not null check (char_length(btrim(summary, E' \t\r\n')) between 1 and 160),
   description text,
   -- Fixed Lucide icon list; Phase 3's icon picker uses the same names.
   icon text check (icon in (
@@ -98,7 +98,7 @@ create policy attraction_images_select_published
   to anon, authenticated
   using (exists (
     select 1 from public.attractions a
-    where a.id = attraction_id and a.is_published
+    where a.id = attraction_images.attraction_id and a.is_published
   )
   or (select public.is_admin()));
 
@@ -128,7 +128,7 @@ create trigger attraction_images_set_updated_at
 -- gallery_categories ---------------------------------------------------------
 create table public.gallery_categories (
   id uuid primary key default gen_random_uuid(),
-  name text not null check (length(trim(name)) > 0),
+  name text not null check (length(btrim(name, E' \t\r\n')) > 0),
   slug text not null unique check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   is_published boolean not null default false,
   sort_order integer not null default 0,

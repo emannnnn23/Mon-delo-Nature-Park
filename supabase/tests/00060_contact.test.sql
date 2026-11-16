@@ -1,5 +1,5 @@
 begin;
-select plan(48);
+select plan(52);
 
 select policies_are(
   'public', 'contact_messages',
@@ -170,6 +170,12 @@ select throws_ok(
 select throws_ok(
   $q$select public.submit_contact_message('Eve Name', 'e6@example.test', repeat('1', 31), 'Subject', 'A long enough message.', '', 5000)$q$,
   '23514', null, 'a 31-character phone is rejected');
+select throws_ok(
+  $q$select public.submit_contact_message(E'\t\n \r', 'e7@example.test', null, 'Subject', 'A long enough message.', '', 5000)$q$,
+  '23514', null, 'a name made only of tabs and newlines is rejected');
+select throws_ok(
+  $q$select public.submit_contact_message('Eve Name', 'e8@example.test', null, 'Subject', E'\t\t\t\t\t\t\t\t\t\t\n\n\n', '', 5000)$q$,
+  '23514', null, 'a message made only of tabs and newlines is rejected');
 select tests.reset_role();
 
 -- Per-email limit: the 4th within an hour is refused, case-insensitively -----
@@ -216,6 +222,13 @@ select is(
 select throws_ok(
   $q$update public.contact_messages set status = 'spam' where email = 'Ana@Example.test'$q$,
   '23514', null, 'an unknown status is rejected');
+select throws_ok(
+  $q$update public.contact_messages set message = 'Rewritten by admin' where email = 'Ana@Example.test'$q$,
+  '42501', null, 'an admin can update the status column only, not the message');
+select ok(
+  has_column_privilege('authenticated', 'public.contact_messages', 'status', 'update')
+    and not has_column_privilege('authenticated', 'public.contact_messages', 'message', 'update'),
+  'authenticated holds update on status only');
 delete from public.contact_messages where email = 'ben@example.test';
 select is(
   (select count(*)::int from public.contact_messages where email = 'ben@example.test'),

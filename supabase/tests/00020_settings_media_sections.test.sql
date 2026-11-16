@@ -1,5 +1,5 @@
 begin;
-select plan(49);
+select plan(77);
 
 select policies_are(
   'public', 'site_settings',
@@ -43,8 +43,8 @@ values
   ('00000000-0000-0000-0000-0000000000a3', '2026/free-cccccc', 'Unreferenced photo', 800, 600,
    '{"480": "2026/free-cccccc-480.webp"}'::jsonb, '2000-01-01 00:00:00+00');
 
-insert into public.site_settings (id, park_name, default_og_media_id, updated_at)
-values ('00000000-0000-0000-0000-0000000000b1', 'Test Park',
+insert into public.site_settings (id, park_name, address_line, default_og_media_id, updated_at)
+values ('00000000-0000-0000-0000-0000000000b1', 'Test Park', 'Test address',
         '00000000-0000-0000-0000-0000000000a2', '2000-01-01 00:00:00+00');
 
 insert into public.page_sections (id, page, key, heading, media_id, is_published, updated_at)
@@ -56,7 +56,7 @@ values
 
 -- Constraints (as postgres)
 select throws_ok(
-  $q$insert into public.site_settings (park_name) values ('Second')$q$,
+  $q$insert into public.site_settings (park_name, address_line) values ('Second', 'Elsewhere')$q$,
   '23505', null, 'a second site_settings row is rejected (singleton)'
 );
 select throws_ok(
@@ -88,6 +88,133 @@ select throws_ok(
 select throws_ok(
   $q$insert into public.page_sections (page, key) values ('home', 'hero')$q$,
   '23505', null, 'duplicate (page, key) is rejected'
+);
+
+-- Form-rule constraints (spec section 8), as postgres
+select throws_ok(
+  $q$insert into public.site_settings (park_name, address_line) values ('Second', '   ')$q$,
+  '23514', null, 'a blank address_line is rejected'
+);
+select throws_ok(
+  $q$insert into public.site_settings (park_name, address_line) values ('Second', E'\t\n')$q$,
+  '23514', null, 'a tab/newline-only address_line is rejected'
+);
+select throws_ok(
+  $q$insert into public.site_settings (park_name) values ('Second')$q$,
+  '23502', null, 'address_line is required'
+);
+select throws_ok(
+  $q$update public.site_settings set facebook_url = 'http://example.test/p'$q$,
+  '23514', null, 'a non-https facebook_url is rejected'
+);
+select throws_ok(
+  $q$update public.site_settings set instagram_url = 'javascript:alert(1)'$q$,
+  '23514', null, 'a javascript: instagram_url is rejected'
+);
+select throws_ok(
+  $q$update public.site_settings set tiktok_url = 'example.test'$q$,
+  '23514', null, 'a scheme-less tiktok_url is rejected'
+);
+select throws_ok(
+  $q$update public.site_settings set youtube_url = 'http://example.test'$q$,
+  '23514', null, 'a non-https youtube_url is rejected'
+);
+select throws_ok(
+  $q$update public.site_settings set maps_listing_url = 'http://example.test'$q$,
+  '23514', null, 'a non-https maps_listing_url is rejected'
+);
+select throws_ok(
+  $q$update public.site_settings set maps_embed_url = 'https://example.test/maps/embed'$q$,
+  '23514', null, 'a maps_embed_url outside google.com/maps/embed is rejected'
+);
+select lives_ok(
+  $q$update public.site_settings set
+       maps_embed_url = 'https://www.google.com/maps/embed?pb=abc',
+       maps_listing_url = 'https://maps.example.test/x',
+       facebook_url = 'https://facebook.example.test/p',
+       phone = '+63 (912) 345-6789',
+       email = 'hello@example.test'$q$,
+  'valid map, social, phone and email values are accepted'
+);
+select throws_ok(
+  $q$update public.site_settings set phone = 'call me'$q$,
+  '23514', null, 'a phone with letters is rejected'
+);
+select throws_ok(
+  $q$update public.site_settings set phone = repeat('1', 31)$q$,
+  '23514', null, 'a phone over 30 characters is rejected'
+);
+select throws_ok(
+  $q$update public.site_settings set email = 'not-an-email'$q$,
+  '23514', null, 'an invalid site email is rejected'
+);
+select throws_ok(
+  $q$update public.site_settings set email = repeat('a', 250) || '@x.test'$q$,
+  '23514', null, 'a site email over 254 characters is rejected'
+);
+select throws_ok(
+  $q$insert into public.media (storage_base_path, alt_text, width, height, variants)
+     values ('2026/x', 'ok', 10, 10, '[]'::jsonb)$q$,
+  '23514', null, 'media variants must be a JSON object'
+);
+select throws_ok(
+  $q$insert into public.media (storage_base_path, alt_text, width, height, variants)
+     values ('2026/x', E'\t\n', 10, 10, '{}'::jsonb)$q$,
+  '23514', null, 'tab/newline-only alt text is rejected'
+);
+select throws_ok(
+  $q$update public.page_sections set cta_label = 'Go', cta_href = '//evil.example'
+     where key = 'hero'$q$,
+  '23514', null, 'a protocol-relative cta_href is rejected'
+);
+select throws_ok(
+  $q$update public.page_sections set cta_label = 'Go', cta_href = 'http://example.test'
+     where key = 'hero'$q$,
+  '23514', null, 'a non-https cta_href is rejected'
+);
+select throws_ok(
+  $q$update public.page_sections set cta_href = '/about' where key = 'hero'$q$,
+  '23514', null, 'a cta_href without a cta_label is rejected'
+);
+select throws_ok(
+  $q$update public.page_sections set cta_label = 'Go' where key = 'hero'$q$,
+  '23514', null, 'a cta_label without a cta_href is rejected'
+);
+select throws_ok(
+  $q$update public.page_sections set cta_label = '   ', cta_href = '/about' where key = 'hero'$q$,
+  '23514', null, 'a blank cta_label is rejected'
+);
+select throws_ok(
+  $q$update public.page_sections set cta_label = repeat('a', 41), cta_href = '/about'
+     where key = 'hero'$q$,
+  '23514', null, 'a cta_label over 40 characters is rejected'
+);
+select lives_ok(
+  $q$update public.page_sections set cta_label = 'Learn more', cta_href = '/about'
+     where key = 'hero'$q$,
+  'a root-relative cta link with a label is accepted'
+);
+select lives_ok(
+  $q$update public.page_sections set cta_label = 'Elsewhere', cta_href = 'https://example.test/x'
+     where key = 'hero'$q$,
+  'an https cta link with a label is accepted'
+);
+select throws_ok(
+  $q$update public.page_sections set heading = repeat('a', 161) where key = 'hero'$q$,
+  '23514', null, 'a heading over 160 characters is rejected'
+);
+select throws_ok(
+  $q$update public.page_sections set eyebrow = repeat('a', 61) where key = 'hero'$q$,
+  '23514', null, 'an eyebrow over 60 characters is rejected'
+);
+select throws_ok(
+  $q$update public.page_sections set body = repeat('a', 4001) where key = 'hero'$q$,
+  '23514', null, 'a body over 4000 characters is rejected'
+);
+select lives_ok(
+  $q$update public.page_sections set heading = repeat('a', 160), eyebrow = repeat('a', 60),
+       body = repeat('a', 4000) where key = 'hero'$q$,
+  'heading, eyebrow and body at their limits are accepted'
 );
 
 -- updated_at maintenance

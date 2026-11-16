@@ -1,5 +1,5 @@
 begin;
-select plan(72);
+select plan(73);
 
 select policies_are(
   'public', 'attractions',
@@ -119,6 +119,11 @@ select throws_ok(
   $q$insert into public.attractions (kind, slug, name, summary)
      values ('attraction', 'empty-summary', 'x', '')$q$,
   '23514', null, 'an empty summary is rejected'
+);
+select throws_ok(
+  $q$insert into public.attractions (kind, slug, name, summary)
+     values ('attraction', 'space-summary', 'x', ' ')$q$,
+  '23514', null, 'a space-only summary is rejected'
 );
 select throws_ok(
   $q$insert into public.attractions (kind, slug, name) values ('attraction', 'no-summary', 'x')$q$,

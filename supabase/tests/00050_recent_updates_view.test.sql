@@ -1,5 +1,5 @@
 begin;
-select plan(21);
+select plan(22);
 
 select tests.create_user('admin-a@example.test', true) as a \gset
 select tests.create_user('user-b@example.test') as b \gset
@@ -58,8 +58,9 @@ insert into public.faqs (id, question, answer, is_published, updated_at)
 values ('00000000-0000-0000-0000-000000000507', 'View question?', 'View answer', false,
         '2020-07-01 00:00:00+00');
 
-insert into public.site_settings (id, park_name, updated_at)
-values ('00000000-0000-0000-0000-000000000508', 'Mondelos Nature Park', '2020-08-01 00:00:00+00');
+insert into public.site_settings (id, park_name, address_line, updated_at)
+values ('00000000-0000-0000-0000-000000000508', 'Mondelos Nature Park', 'Test address',
+        '2020-08-01 00:00:00+00');
 
 -- Anonymous: no grant at all.
 select tests.as_anon();
@@ -120,7 +121,7 @@ select is(
   '00000000-0000-0000-0000-000000000508'::uuid, 'the view exposes the source row id'
 );
 select is(
-  (select source from public.recent_content_updates limit 1),
+  (select source from public.recent_content_updates order by updated_at desc, id limit 1),
   'site_settings', 'the first row is the most recently updated'
 );
 select is(
@@ -144,7 +145,7 @@ select is(
   'admin sees at most 10 rows'
 );
 select is(
-  (select title from public.recent_content_updates limit 1), 'Cap D',
+  (select title from public.recent_content_updates order by updated_at desc, id limit 1), 'Cap D',
   'the newest row comes first'
 );
 select is(
@@ -152,6 +153,22 @@ select is(
    where source in ('page_sections', 'attractions') and title in ('home · hero', 'View Spot')),
   0::bigint,
   'the two oldest rows fall outside the top 10'
+);
+select tests.reset_role();
+
+-- Ties on updated_at break by id; this reads the view's own ordering (no
+-- outer order by) on purpose, since the order is the view's contract.
+insert into public.attractions (id, kind, slug, name, summary, updated_at)
+values
+  ('00000000-0000-0000-0000-0000000000f2', 'attraction', 'tie-b', 'Tie B', 'Summary',
+   '2021-01-01 00:00:00+00'),
+  ('00000000-0000-0000-0000-0000000000f1', 'attraction', 'tie-a', 'Tie A', 'Summary',
+   '2021-01-01 00:00:00+00');
+select tests.authenticate_as(:'a');
+select is(
+  (select array_agg(id) from (select id from public.recent_content_updates limit 2) v),
+  array['00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000f2']::uuid[],
+  'rows with equal updated_at come back in id order'
 );
 select tests.reset_role();
 

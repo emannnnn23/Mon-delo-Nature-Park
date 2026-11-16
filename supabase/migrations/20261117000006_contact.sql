@@ -5,14 +5,14 @@
 
 create table public.contact_messages (
   id uuid primary key default gen_random_uuid(),
-  full_name text not null check (char_length(trim(full_name)) between 2 and 100),
+  full_name text not null check (char_length(btrim(full_name, E' \t\r\n')) between 2 and 100),
   email text not null check (
-    char_length(trim(email)) <= 254
-    and trim(email) ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'
+    char_length(btrim(email, E' \t\r\n')) <= 254
+    and btrim(email, E' \t\r\n') ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'
   ),
   phone text check (phone ~ '^[0-9 +()-]{0,30}$'),
-  subject text not null check (char_length(trim(subject)) between 2 and 150),
-  message text not null check (char_length(trim(message)) between 10 and 5000),
+  subject text not null check (char_length(btrim(subject, E' \t\r\n')) between 2 and 150),
+  message text not null check (char_length(btrim(message, E' \t\r\n')) between 10 and 5000),
   status text not null default 'new' check (status in ('new', 'read', 'archived')),
   submitted_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
@@ -33,7 +33,9 @@ create index contact_messages_submitted_at_idx
 alter table public.contact_messages enable row level security;
 
 revoke all on public.contact_messages from anon, authenticated;
-grant select, update, delete on public.contact_messages to authenticated;
+grant select, delete on public.contact_messages to authenticated;
+-- Admins triage messages (new/read/archived); the content itself is immutable.
+grant update (status) on public.contact_messages to authenticated;
 
 create policy contact_messages_select_admin
   on public.contact_messages
@@ -80,14 +82,14 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_full_name text := trim(p_full_name);
-  v_email text := trim(p_email);
-  v_phone text := nullif(trim(p_phone), '');
-  v_subject text := trim(p_subject);
-  v_message text := trim(p_message);
+  v_full_name text := btrim(p_full_name, E' \t\r\n');
+  v_email text := btrim(p_email, E' \t\r\n');
+  v_phone text := nullif(btrim(p_phone, E' \t\r\n'), '');
+  v_subject text := btrim(p_subject, E' \t\r\n');
+  v_message text := btrim(p_message, E' \t\r\n');
   v_since timestamptz := now() - interval '1 hour';
 begin
-  if nullif(trim(p_honeypot), '') is not null
+  if nullif(btrim(p_honeypot, E' \t\r\n'), '') is not null
      or p_elapsed_ms is null
      or p_elapsed_ms < 3000 then
     return 'ok';

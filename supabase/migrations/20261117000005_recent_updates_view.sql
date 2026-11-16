@@ -31,7 +31,7 @@ from (
   select 'site_settings', id, 'Contact & settings', updated_at
     from public.site_settings where (select public.is_admin())
 ) as recent
-order by updated_at desc
+order by updated_at desc, id
 limit 10;
 
 revoke all on public.recent_content_updates from anon, authenticated;

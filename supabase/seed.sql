@@ -5,15 +5,12 @@
 -- seeded. src/content/placeholders.ts mirrors this file.
 
 -- site_settings ----------------------------------------------------------------
-insert into public.site_settings (
-  park_name, address_line, plus_code, google_rating, google_review_count
-) values (
-  'Mondelos Nature Park',
-  'M8GV+8GP, Balaring Road, Kawayan, Biliran, Philippines',
-  'M8GV+8GP',
-  4.6,
-  70
-);
+-- The row itself is created by migration 0002; the seed only fills in the demo
+-- values.
+update public.site_settings
+set plus_code = 'M8GV+8GP',
+    google_rating = 4.6,
+    google_review_count = 70;
 
 -- page_sections ------------------------------------------------------------------
 insert into public.page_sections

@@ -1,5 +1,5 @@
 begin;
-select plan(76);
+select plan(78);
 
 select policies_are(
   'public', 'testimonials',
@@ -137,6 +137,14 @@ select throws_ok(
 select throws_ok(
   $q$insert into public.announcements (title, link_label, link_href) values ('Bad link', 'Go', 'http://example.test')$q$,
   '23514', null, 'a link href that is neither a path nor https is rejected'
+);
+select throws_ok(
+  $q$insert into public.announcements (title, link_label, link_href) values ('Evil link', 'Go', '//evil.example')$q$,
+  '23514', null, 'a protocol-relative link href is rejected'
+);
+select throws_ok(
+  $q$insert into public.announcements (title, link_label, link_href) values ('Blank label', '   ', '/visit')$q$,
+  '23514', null, 'a blank link label is rejected'
 );
 select lives_ok(
   $q$insert into public.announcements (title, link_label, link_href) values ('Path link', 'Visit', '/visit')$q$,

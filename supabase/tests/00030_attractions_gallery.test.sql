@@ -37,6 +37,14 @@ select policies_are(
 select tests.create_user('admin-a@example.test', true) as a \gset
 select tests.create_user('user-b@example.test') as b \gset
 
+-- Clean slate: seed.sql inserts rows this test counts and reuses keys of.
+-- Everything is rolled back with the transaction.
+delete from public.site_settings;
+delete from public.page_sections;
+delete from public.attractions;
+delete from public.gallery_images;
+delete from public.gallery_categories;
+
 -- Seed as postgres (before switching roles).
 -- updated_at is set explicitly to an old value on insert; the update trigger
 -- only fires on update, so this gives a baseline that works inside one transaction.

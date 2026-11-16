@@ -9,3 +9,4 @@ supabase/.temp/
 .claude/
 docs/
 package-lock.json
+src/types/database.ts

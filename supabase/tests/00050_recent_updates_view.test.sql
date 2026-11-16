@@ -17,6 +17,14 @@ select ok(
   'authenticated holds no write privilege on the view'
 );
 
+-- Clean slate: seed.sql inserts rows this test counts and reuses keys of.
+-- Everything is rolled back with the transaction.
+delete from public.site_settings;
+delete from public.page_sections;
+delete from public.attractions;
+delete from public.gallery_images;
+delete from public.gallery_categories;
+
 -- Seed one row per source, as postgres, with distinct explicit updated_at
 -- values (oldest first). Everything is unpublished: the view is for admins.
 insert into public.media (id, storage_base_path, alt_text, width, height, variants, updated_at)

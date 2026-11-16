@@ -16,6 +16,7 @@ export default tseslint.config(
       ".superpowers/",
       ".claude/",
       "docs/",
+      "src/types/database.ts",
     ],
   },
   js.configs.recommended,

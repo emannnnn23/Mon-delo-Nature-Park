@@ -18,9 +18,9 @@ Versions tested: react-router 8.5.1, @react-router/dev 8.5.1, vite 8.3.8, react 
 | 6.4 | `/spike/missing` renders the error boundary                                        | PASS                                                              |
 | (a) | Pre-rendered content stays visible until `clientLoader` resolves, no HydrateFallback | PASS                                                            |
 | (b) | `serverLoader()` inside `clientLoader`: works on pre-rendered, fails on non-pre-rendered | PASS (behaves as expected; failure is a catchable `Error`)  |
-| -   | Vercel real-404 check                                                              | PENDING, Phase 5 Task 5                                           |
+| -   | Vercel hosting behaviour (see Hosting notes)                                       | PENDING, Phase 5 Task 5. Check 6.3 was validated only under a catch-all host; on Vercel the narrow `/discover/:slug` rewrite must serve late-published slugs, and other unknown paths must give a real 404 |
 
-GATE outcome: every check passes using variant 4b or 4c. No design change needed. One constraint Phase 4 must handle (see "Zero-slug constraint").
+GATE outcome: gate passed via variant 4b (clientLoader-only detail route builds with zero slugs; 4c, loader plus at least one slug, also builds). The zero-slug decision is open for Phase 4. Controller ruling: use loader + clientLoader when at least one published slug exists; when the build-time slug list is empty, `routes.ts` registers the clientLoader-only detail module; Phase 4 adds a zero-slug build test (see "Zero-slug constraint").
 
 ## Documentation and source consulted
 
@@ -84,7 +84,7 @@ Test route `spike-sl.$slug` (`loader` + `clientLoader` that does `try { await se
 - Pre-rendered slug `a`, client navigation: `serverLoader()` fetches `/spike-sl/a.data`, the pre-rendered data file, and returns `build`. Works.
 - Non-pre-rendered slug `b`, direct load and client navigation: `serverLoader()` **rejects**. In the spike host the `.data` URL fell through to the HTML fallback, so the error was `Unable to decode turbo-stream response` (a plain `Error`, catchable). On a real host the `/b.data` request would 404, which is also a rejection. Either way it is an error, not data.
 
-So `serverLoader()` is a usable "last resort" only for pre-rendered slugs, and the `clientLoader` must always `try/catch` it. It must not be relied on for slugs that were published after the build.
+So `serverLoader()` is a usable "last resort" only for pre-rendered slugs, and the `clientLoader` must always `try/catch` it. It must not be relied on for slugs that were published after the build. Phase 4 uses `serverLoader()` only as a try/catch-wrapped failure fallback, never as the data source.
 
 ## The pattern that works
 
@@ -150,8 +150,9 @@ Build-time validation is **per route module**: a route that exports `loader` mus
 
 ## Hosting notes
 
-- `npx serve build/client -s` (the brief's command) is **not** a faithful host for this build. It falls back to `index.html`, which is the pre-rendered home page here, and it served the home HTML even for `/spike`. The SPA still worked client-side, but the pre-rendered HTML for `/spike` was not delivered. Use a real rewrite instead: files and `*/index.html` first, then `/* -> /__spa-fallback.html` with status 200. That is the pattern in the React Router docs (`sirv-cli build/client --single __spa-fallback.html`; `_redirects` style `/* /__spa-fallback.html 200`). Vercel equivalent (`rewrites` to `/__spa-fallback.html`, with filesystem routes taking precedence) is from general knowledge and not verified here; verify in Phase 5 Task 5.
-- The fallback returns HTTP 200 for unknown slugs, so a non-existent slug shows the 404 error boundary only after the `clientLoader` throws `data(null, { status: 404 })`; the HTTP status stays 200 and the page is soft-404. Real HTTP 404 behaviour on Vercel: **pending, Phase 5 Task 5**.
+- `npx serve build/client -s` (the brief's command) is **not** a faithful host for this build. It falls back to `index.html`, which is the pre-rendered home page here, and it served the home HTML even for `/spike`. The SPA still worked client-side, but the pre-rendered HTML for `/spike` was not delivered. For the spike checks I used a catch-all host (files and `*/index.html` first, then `/* -> /__spa-fallback.html` with status 200), which is the generic pattern in the React Router docs (`sirv-cli build/client --single __spa-fallback.html`; `_redirects` style `/* /__spa-fallback.html 200`). **Do not use the catch-all as the production pattern.**
+- Scope of check 6.3: `/spike/b` (not pre-rendered) rendering `client` + slug `b` was validated **only under a catch-all** fallback host. The production spec differs: Vercel rewrites only `/admin/*` and `/discover/*` to `__spa-fallback.html`, and every other unmatched path gets the prerendered `404.html` with a real 404 status. On Vercel the narrow `/discover/:slug` rewrite is what serves late-published slugs. Unknown `/discover/<slug>` paths are a soft 404 (HTTP 200 + not-found page) by design, because the rewrite returns 200; other unknown paths must be a real 404. Neither the rewrite precedence nor these statuses were verified here; both are to be verified in Phase 5 Task 5.
+- The fallback returns HTTP 200 for unknown slugs, so a non-existent slug shows the 404 error boundary only after the `clientLoader` throws `data(null, { status: 404 })`; the HTTP status stays 200 and the page is soft-404. Real HTTP 404 behaviour on Vercel (narrow rewrites plus `404.html`): **pending, Phase 5 Task 5**.
 - `__spa-fallback.html` body is empty (`<body>` then scripts only), because the root route has no `HydrateFallback`. Non-pre-rendered slugs therefore show a blank page until `clientLoader` resolves. Phase 4 may want a root-level `HydrateFallback` for the fallback shell, but it applies only to the root route and must not be added to pre-rendered public routes.
 
 ## Spike environment deviations (for the record)

@@ -17,6 +17,20 @@ describe("buildMeta", () => {
     });
   });
 
+  it("strips trailing slashes from siteUrl before joining", () => {
+    const meta = buildMeta({ ...base, siteUrl: "https://x.ph/" });
+    expect(meta).toContainEqual({
+      property: "og:url",
+      content: "https://x.ph/gallery",
+    });
+    const home = buildMeta({ ...base, path: "/", siteUrl: "https://x.ph//" });
+    expect(home).toContainEqual({
+      tagName: "link",
+      rel: "canonical",
+      href: "https://x.ph/",
+    });
+  });
+
   it("uses the home title when no title is given", () => {
     const meta = buildMeta({ ...base, path: "/" });
     expect(meta).toContainEqual({

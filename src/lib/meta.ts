@@ -24,7 +24,7 @@ export function buildMeta({
   siteUrl,
 }: BuildMetaInput): MetaDescriptor[] {
   const fullTitle = title ? `${title} · ${SITE_NAME}` : HOME_TITLE;
-  const url = `${siteUrl}${path}`;
+  const url = `${siteUrl.replace(/\/+$/, "")}${path}`;
   const meta: MetaDescriptor[] = [
     { title: fullTitle },
     { name: "description", content: description },

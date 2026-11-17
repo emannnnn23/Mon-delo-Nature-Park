@@ -10,7 +10,7 @@ export function meta() {
   });
 }
 
-export function clientLoader() {
+export function loader() {
   return {
     categories: placeholders.galleryCategories,
     images: placeholders.galleryImages,

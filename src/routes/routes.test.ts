@@ -19,32 +19,35 @@ import { placeholders } from "~/content/placeholders";
 
 type RouteModule = {
   default: ComponentType<{ loaderData: unknown; params: Params }>;
-  clientLoader: (args: { params: Params }) => unknown;
+  loader?: (args: { params: Params }) => unknown;
   meta: (args: { params: Params }) => MetaDescriptor[];
 };
 
 // Mirrors what the framework does at runtime: loader data and params are
 // handed to the page component as props.
-function asRoute(mod: RouteModule) {
+function asRoute(mod: unknown) {
+  const m = mod as RouteModule;
   return {
     Component() {
       const loaderData = useLoaderData();
       const params = useParams();
-      return createElement(mod.default, { loaderData, params });
+      return createElement(m.default, { loaderData, params });
     },
-    loader: ({ params }: { params: Params }) => mod.clientLoader({ params }),
+    loader: m.loader
+      ? ({ params }: { params: Params }) => m.loader?.({ params })
+      : undefined,
   };
 }
 
 function renderAt(path: string) {
   const Stub = createRoutesStub([
-    { path: "/", ...asRoute(home as unknown as RouteModule) },
-    { path: "/discover", ...asRoute(discover as unknown as RouteModule) },
-    { path: "/discover/:slug", ...asRoute(detail as unknown as RouteModule) },
-    { path: "/gallery", ...asRoute(gallery as unknown as RouteModule) },
-    { path: "/about", ...asRoute(about as unknown as RouteModule) },
-    { path: "/visit", ...asRoute(visit as unknown as RouteModule) },
-    { path: "*", ...asRoute(notFound as unknown as RouteModule) },
+    { path: "/", ...asRoute(home) },
+    { path: "/discover", ...asRoute(discover) },
+    { path: "/discover/:slug", ...asRoute(detail) },
+    { path: "/gallery", ...asRoute(gallery) },
+    { path: "/about", ...asRoute(about) },
+    { path: "/visit", ...asRoute(visit) },
+    { path: "*", ...asRoute(notFound) },
   ]);
   return render(createElement(Stub, { initialEntries: [path] }));
 }
@@ -59,7 +62,6 @@ describe("public route modules", () => {
     ["/about", "About the Park"],
     ["/visit", "Visit Us"],
     ["/nope", "Page not found"],
-    ["/discover/x", "Page not found"],
   ])("%s renders exactly one h1", async (path, heading) => {
     renderAt(path);
     const h1s = await screen.findAllByRole("heading", { level: 1 });
@@ -74,7 +76,34 @@ describe("public route modules", () => {
     expect(h1).toHaveTextContent(known.name);
   });
 
-  it("every route module exports meta and clientLoader", () => {
+  it("detail loader throws a 404 response for an unknown slug", () => {
+    let thrown: unknown;
+    try {
+      detail.loader({ params: { slug: "x" } } as never);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({ init: { status: 404 } });
+  });
+
+  it("detail loader returns the attraction for a known slug", () => {
+    if (!known) throw new Error("no placeholder attraction");
+    expect(detail.loader({ params: { slug: known.slug } } as never)).toEqual({
+      attraction: known,
+    });
+  });
+
+  it("every route module exports meta; page routes export a loader", () => {
+    for (const mod of [home, discover, detail, gallery, about, visit]) {
+      expect(typeof mod.meta).toBe("function");
+      expect(typeof mod.loader).toBe("function");
+    }
+    expect(typeof notFound.meta).toBe("function");
+    // Backs the un-pre-rendered catch-all route, so it must not have a loader.
+    expect("loader" in notFound).toBe(false);
+  });
+
+  it("no route module exports a clientLoader yet", () => {
     for (const mod of [
       home,
       discover,
@@ -84,8 +113,7 @@ describe("public route modules", () => {
       visit,
       notFound,
     ]) {
-      expect(typeof mod.meta).toBe("function");
-      expect(typeof mod.clientLoader).toBe("function");
+      expect("clientLoader" in mod).toBe(false);
     }
   });
 });

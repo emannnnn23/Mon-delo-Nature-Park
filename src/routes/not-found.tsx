@@ -1,4 +1,3 @@
-import { placeholders } from "~/content/placeholders";
 import { buildMeta, SITE_URL } from "~/lib/meta";
 
 export function meta() {
@@ -13,10 +12,9 @@ export function meta() {
   ];
 }
 
-export function clientLoader() {
-  return { attractions: placeholders.attractions };
-}
-
+// No loader: this module backs both `/404` (pre-rendered) and the catch-all
+// route, which no pre-render path matches. React Router rejects a `loader` on
+// a route that is never pre-rendered when `ssr: false`.
 export default function NotFound() {
   return (
     <main className="mx-auto max-w-3xl p-8">

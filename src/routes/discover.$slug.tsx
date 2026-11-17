@@ -1,3 +1,5 @@
+import { data } from "react-router";
+
 import { placeholders } from "~/content/placeholders";
 import { buildMeta, SITE_URL } from "~/lib/meta";
 
@@ -19,17 +21,17 @@ export function meta({ params }: Route.MetaArgs) {
   });
 }
 
-export function clientLoader({ params }: Route.ClientLoaderArgs) {
-  return { attraction: findAttraction(params.slug) };
+export function loader({ params }: Route.LoaderArgs) {
+  const attraction = findAttraction(params.slug);
+  if (!attraction) throw data(null, { status: 404 });
+  return { attraction };
 }
 
 export default function DiscoverDetail({ loaderData }: Route.ComponentProps) {
   const { attraction } = loaderData;
   return (
     <main className="mx-auto max-w-3xl p-8">
-      <h1 className="font-serif text-4xl text-forest-900">
-        {attraction?.name ?? "Page not found"}
-      </h1>
+      <h1 className="font-serif text-4xl text-forest-900">{attraction.name}</h1>
     </main>
   );
 }

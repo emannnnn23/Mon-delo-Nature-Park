@@ -11,7 +11,7 @@ export function meta() {
   });
 }
 
-export function clientLoader() {
+export function loader() {
   return { attractions: placeholders.attractions };
 }
 

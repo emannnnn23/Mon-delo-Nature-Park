@@ -9,7 +9,7 @@ export function meta() {
   });
 }
 
-export function clientLoader() {
+export function loader() {
   return { sections: placeholders.sections.home };
 }
 

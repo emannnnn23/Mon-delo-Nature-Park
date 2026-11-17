@@ -160,8 +160,56 @@ describe("LeafDecor", () => {
   });
 });
 
+function stubObserver(): { fire: () => void } {
+  let callback: IntersectionObserverCallback = () => {};
+  class FakeObserver {
+    constructor(cb: IntersectionObserverCallback) {
+      callback = cb;
+    }
+    observe = vi.fn();
+    disconnect = vi.fn();
+    unobserve = vi.fn();
+  }
+  vi.stubGlobal("IntersectionObserver", FakeObserver);
+  return {
+    fire: () =>
+      act(() => {
+        callback(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
+      }),
+  };
+}
+
+function placeBelowFold() {
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
+    top: 5000,
+    bottom: 5200,
+    left: 0,
+    right: 300,
+    width: 300,
+    height: 200,
+    x: 0,
+    y: 5000,
+    toJSON: () => ({}),
+  });
+}
+
 describe("Reveal", () => {
-  it("has no opacity-0 class under reduced motion", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("has no opacity-0 class under reduced motion, even when it could be armed", () => {
+    mockMatchMedia(false);
+    stubObserver();
+    placeBelowFold();
+    // Control: with motion allowed this same setup is armed and hidden.
+    const control = render(<Reveal>Control</Reveal>);
+    expect(control.container.innerHTML).toContain("opacity-0");
+    control.unmount();
+
     mockMatchMedia(true);
     const { container } = render(<Reveal>Hello</Reveal>);
     expect(container.innerHTML).not.toContain("opacity-0");
@@ -177,24 +225,11 @@ describe("Reveal", () => {
 
   it("starts hidden when it can observe, then reveals when in view", () => {
     mockMatchMedia(false);
-    let callback: IntersectionObserverCallback = () => {};
-    class FakeObserver {
-      constructor(cb: IntersectionObserverCallback) {
-        callback = cb;
-      }
-      observe = vi.fn();
-      disconnect = vi.fn();
-      unobserve = vi.fn();
-    }
-    vi.stubGlobal("IntersectionObserver", FakeObserver);
+    const observer = stubObserver();
+    placeBelowFold();
     const { container } = render(<Reveal>Hello</Reveal>);
     expect(container.innerHTML).toContain("opacity-0");
-    act(() => {
-      callback(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
-        {} as IntersectionObserver,
-      );
-    });
+    observer.fire();
     expect(container.innerHTML).not.toContain("opacity-0");
   });
 });

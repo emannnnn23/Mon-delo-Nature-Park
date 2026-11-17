@@ -44,7 +44,7 @@ export function MapsCard({
         aria-hidden="true"
         focusable="false"
         viewBox="0 0 600 400"
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio="xMaxYMin slice"
         className="absolute inset-0 -z-10 h-full w-full"
       >
         <g fill="none" stroke="#f8f5ec" strokeOpacity="0.09" strokeWidth="1.5">

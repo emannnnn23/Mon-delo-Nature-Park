@@ -2,8 +2,8 @@ import { ArrowRight, MapPin } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Button } from "../common/Button";
 import { ResponsiveImage } from "../common/ResponsiveImage";
+import { HERO_DEFAULT_IMAGE } from "../../content/heroDefault";
 import type { PageSection } from "../../types/content";
-import { HeroIllustration } from "./HeroIllustration";
 
 type HeroProps = { section: PageSection | null };
 
@@ -34,14 +34,14 @@ function rise(
 }
 
 /**
- * Full-bleed opening band under the transparent header. Shows the hero photo
- * when there is one, otherwise an illustrated landscape; a dark scrim from the
- * left and bottom keeps the header and heading legible on either.
+ * Full-bleed opening band under the transparent header. Shows the hero image
+ * set in the CMS, otherwise the park's default hero photo; a dark scrim from
+ * the top, left and bottom keeps the header and heading legible over it.
  */
 export function Hero({ section }: HeroProps) {
   const [lead, accent] = splitHeading(section?.heading ?? FALLBACK_HEADING);
   const body = section?.body;
-  const image = section?.image ?? null;
+  const image = section?.image ?? HERO_DEFAULT_IMAGE;
 
   return (
     <section
@@ -50,11 +50,7 @@ export function Hero({ section }: HeroProps) {
       className="relative isolate flex h-[100svh] min-h-[560px] flex-col overflow-hidden bg-forest-900 text-ivory-50 lg:h-[88vh]"
     >
       <div className="absolute inset-0 -z-10">
-        {image ? (
-          <ResponsiveImage asset={image} sizes="100vw" priority />
-        ) : (
-          <HeroIllustration />
-        )}
+        <ResponsiveImage asset={image} sizes="100vw" priority />
         {/* Scrim: top for the header, left and bottom for the copy. */}
         <div
           aria-hidden="true"

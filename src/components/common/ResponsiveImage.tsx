@@ -1,4 +1,4 @@
-import { publicMediaUrl } from "../../lib/media";
+import { mediaVariantUrl } from "../../lib/media";
 import type { MediaAsset } from "../../types/content";
 import { buildSrcSet, pickFallbackSrc } from "../../utils/imageVariants";
 import { PlaceholderImage } from "./PlaceholderImage";
@@ -30,8 +30,8 @@ export function ResponsiveImage({
 
   return (
     <img
-      src={publicMediaUrl(pickFallbackSrc(asset.variants))}
-      srcSet={buildSrcSet(asset.variants, publicMediaUrl)}
+      src={mediaVariantUrl(pickFallbackSrc(asset.variants))}
+      srcSet={buildSrcSet(asset.variants, mediaVariantUrl)}
       sizes={sizes}
       alt={asset.alt}
       width={asset.width}

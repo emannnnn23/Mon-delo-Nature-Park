@@ -1,7 +1,7 @@
 import { data, isRouteErrorResponse } from "react-router";
 
 import { placeholders } from "~/content/placeholders";
-import { publicMediaUrl } from "~/lib/media";
+import { mediaVariantUrl } from "~/lib/media";
 import { buildMeta, SITE_URL } from "~/lib/meta";
 import { AttractionPage } from "~/pages/AttractionPage";
 import { ErrorContent } from "~/pages/ErrorPage";
@@ -28,7 +28,9 @@ export function meta({ params, loaderData }: Route.MetaArgs) {
       attraction?.summary ??
       "This page could not be found at Mondelos Nature Park.",
     path: `/discover/${params.slug}`,
-    image: cover ? publicMediaUrl(pickFallbackSrc(cover.variants, 1600)) : null,
+    image: cover
+      ? mediaVariantUrl(pickFallbackSrc(cover.variants, 1600))
+      : null,
     siteUrl: SITE_URL,
   });
 }

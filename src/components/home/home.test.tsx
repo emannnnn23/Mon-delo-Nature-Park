@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { HERO_DEFAULT_IMAGE } from "../../content/heroDefault";
 import { placeholders } from "../../content/placeholders";
 import { selectHomeContent } from "../../lib/homeContent";
 import { HomePage, type HomePageProps } from "../../pages/HomePage";
@@ -174,10 +175,52 @@ describe("Hero", () => {
     expect(
       within(hero).getByText("Kawayan, Biliran, Philippines"),
     ).toBeVisible();
-    // No image yet: an illustration, never a "Photo coming soon" chip.
+    // Default photo, never a "Photo coming soon" chip.
     expect(within(hero).queryByText(/photo coming soon/i)).toBeNull();
     // A null hero body renders no subline paragraph.
     expect(hero.querySelectorAll("p")).toHaveLength(0);
+  });
+
+  it("shows the park's default hero photo, with priority loading, when the CMS has none", () => {
+    renderHome();
+    const hero = screen.getByRole("heading", { level: 1 }).closest("section");
+    if (!hero) throw new Error("hero section missing");
+    const img = within(hero).getByRole("img", {
+      name: HERO_DEFAULT_IMAGE.alt,
+    });
+    expect(img.getAttribute("src")).toBe("/images/hero/hero-bay-960.webp");
+    expect(img.getAttribute("srcset")).toBe(
+      "/images/hero/hero-bay-480.webp 480w, /images/hero/hero-bay-960.webp 960w, /images/hero/hero-bay-1600.webp 1600w, /images/hero/hero-bay-1947.webp 1947w",
+    );
+    expect(img).toHaveAttribute("sizes", "100vw");
+    expect(img).toHaveAttribute("fetchpriority", "high");
+    expect(img).not.toHaveAttribute("loading", "lazy");
+    expect(img).toHaveStyle({ objectPosition: "58% 55%" });
+    expect(within(hero).queryByText(/illustrative/i)).toBeNull();
+  });
+
+  it("shows the CMS hero image instead of the default when one is set", () => {
+    const cms = {
+      id: "cms-hero",
+      alt: "CMS hero",
+      width: 1600,
+      height: 900,
+      variants: { 960: "hero/960.webp" },
+      focalX: 50,
+      focalY: 50,
+    };
+    renderHome({
+      sections: base.sections.map((s) =>
+        s.key === "hero" ? { ...s, image: cms } : s,
+      ),
+    });
+    const hero = screen.getByRole("heading", { level: 1 }).closest("section");
+    if (!hero) throw new Error("hero section missing");
+    expect(within(hero).getByRole("img", { name: "CMS hero" })).toBeVisible();
+    expect(
+      within(hero).queryByRole("img", { name: HERO_DEFAULT_IMAGE.alt }),
+    ).toBeNull();
+    expect(within(hero).queryByText(/illustrative/i)).toBeNull();
   });
 
   it("keeps the heading out of the opacity fade so it can be the LCP element", () => {

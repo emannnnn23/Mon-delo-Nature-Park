@@ -9,3 +9,13 @@ export function publicMediaUrl(path: string): string {
   const base = getPublicEnv()?.supabaseUrl.replace(/\/+$/, "") ?? "";
   return `${base}/storage/v1/object/public/media/${path}`;
 }
+
+/**
+ * URL for a media variant path. Paths that are already absolute (a site static
+ * file such as `/images/...`, or a full `https://` URL) pass through unchanged;
+ * anything else is a key in the `media` bucket.
+ */
+export function mediaVariantUrl(path: string): string {
+  if (path.startsWith("/") || path.startsWith("https://")) return path;
+  return publicMediaUrl(path);
+}

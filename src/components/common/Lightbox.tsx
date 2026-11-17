@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect, useRef, type TouchEvent } from "react";
 import { createPortal } from "react-dom";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
-import { publicMediaUrl } from "../../lib/media";
+import { mediaVariantUrl } from "../../lib/media";
 import type { MediaAsset } from "../../types/content";
 import { pickFallbackSrc } from "../../utils/imageVariants";
 import { PlaceholderImage } from "./PlaceholderImage";
@@ -142,7 +142,7 @@ export function Lightbox({
         ) : (
           <img
             key={image.id}
-            src={publicMediaUrl(pickFallbackSrc(image.variants, 2400))}
+            src={mediaVariantUrl(pickFallbackSrc(image.variants, 2400))}
             alt={image.alt}
             width={image.width}
             height={image.height}

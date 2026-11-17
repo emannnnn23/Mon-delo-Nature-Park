@@ -155,6 +155,32 @@ describe("ResponsiveImage", () => {
     expect(img).toHaveStyle({ objectPosition: "30% 70%" });
   });
 
+  it("uses site-absolute variant paths as they are", () => {
+    render(
+      <ResponsiveImage
+        asset={{
+          ...asset,
+          variants: { 480: "/images/a-480.webp", 960: "/images/a-960.webp" },
+        }}
+        sizes="100vw"
+      />,
+    );
+    const img = screen.getByRole("img", { name: "Sunrise over the hills" });
+    expect(img).toHaveAttribute("src", "/images/a-960.webp");
+    expect(img).toHaveAttribute(
+      "srcset",
+      "/images/a-480.webp 480w, /images/a-960.webp 960w",
+    );
+  });
+
+  it("sends bucket keys through the media storage URL", () => {
+    render(<ResponsiveImage asset={asset} sizes="100vw" />);
+    const img = screen.getByRole("img", { name: "Sunrise over the hills" });
+    expect(img.getAttribute("src")).toMatch(
+      /\/storage\/v1\/object\/public\/media\/a\/960\.webp$/,
+    );
+  });
+
   it("loads eagerly with high priority when `priority`", () => {
     render(<ResponsiveImage asset={asset} sizes="100vw" priority />);
     const img = screen.getByRole("img", { name: "Sunrise over the hills" });

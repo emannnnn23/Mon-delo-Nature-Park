@@ -64,14 +64,12 @@ export function SiteHeader({ overHero }: SiteHeaderProps) {
         </nav>
 
         <div className="flex items-center justify-self-end">
-          <Button
-            to="/visit"
-            variant="gold"
-            icon={ArrowRight}
-            className="hidden lg:inline-flex"
-          >
-            Plan Your Visit
-          </Button>
+          {/* Wrapped: a `hidden` class on Button loses to its base `inline-flex`. */}
+          <div className="hidden lg:block">
+            <Button to="/visit" variant="gold" icon={ArrowRight}>
+              Plan Your Visit
+            </Button>
+          </div>
           <button
             ref={menuButtonRef}
             type="button"

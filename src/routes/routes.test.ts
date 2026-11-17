@@ -73,6 +73,26 @@ describe("public route modules", () => {
     expect(h1s[0]).toHaveTextContent(heading);
   });
 
+  it("/nope shows Page not found with Home and Visit Us buttons", async () => {
+    renderAt("/nope");
+    expect(
+      await screen.findByRole(
+        "heading",
+        { level: 1, name: "Page not found" },
+        { timeout: 5000 },
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+    expect(screen.getByRole("link", { name: /visit us/i })).toHaveAttribute(
+      "href",
+      "/visit",
+    );
+    expect(screen.queryByRole("main")).not.toBeInTheDocument();
+  });
+
   it("detail renders the attraction name for a known placeholder slug", async () => {
     if (!known) throw new Error("no placeholder attraction");
     renderAt(`/discover/${known.slug}`);

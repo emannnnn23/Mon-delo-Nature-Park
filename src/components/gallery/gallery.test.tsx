@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import { hydrateRoot, type Root } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { MemoryRouter, createRoutesStub, useLocation } from "react-router";
 
 import { placeholders } from "~/content/placeholders";
@@ -280,6 +282,80 @@ describe("Lightbox", () => {
     expect(screen.getByText("2 / 4")).toBeInTheDocument();
     swipe(200, 100, 400); // mostly vertical
     expect(screen.getByText("2 / 4")).toBeInTheDocument();
+  });
+});
+
+describe("hydration and URL params", () => {
+  const page = (
+    <MemoryRouter initialEntries={["/gallery?category=gardens"]}>
+      <GalleryPage intro={null} categories={categories} images={images} />
+    </MemoryRouter>
+  );
+
+  it("renders All on the server and applies ?category after hydration without a mismatch", async () => {
+    const html = renderToString(page);
+    expect(html).toContain("Photo a");
+    expect(html).toContain("Photo d");
+
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.append(container);
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    let root!: Root;
+    await act(async () => {
+      root = hydrateRoot(container, page);
+    });
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+
+    expect(
+      within(container).getByRole("button", { name: "Gardens" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(container).queryByRole("button", { name: "Photo a" }),
+    ).toBeNull();
+    expect(
+      within(container).getByRole("button", { name: "Photo b" }),
+    ).toBeTruthy();
+
+    await act(async () => root.unmount());
+    container.remove();
+  });
+
+  it("keeps other search params when a chip changes", async () => {
+    const user = userEvent.setup();
+    renderGallery("/gallery?utm=x&category=gardens");
+    await user.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByTestId("search")).toHaveTextContent("?utm=x");
+    await user.click(screen.getByRole("button", { name: "Gardens" }));
+    expect(screen.getByTestId("search")).toHaveTextContent(
+      "?utm=x&category=gardens",
+    );
+  });
+});
+
+describe("Sample tags", () => {
+  const sample = { ...galleryImage("s", null), isSample: true };
+
+  it("marks sample photos in the gallery grid only", () => {
+    renderGallery("/gallery", [sample, images[0]]);
+    expect(screen.getAllByText("Sample")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Photo s" })).toBeInTheDocument();
+  });
+
+  it("marks sample photos in the homepage mosaic", () => {
+    render(
+      <MemoryRouter>
+        <GalleryTestimonialsBand
+          gallerySection={null}
+          testimonialsSection={null}
+          testimonials={[]}
+          settings={placeholders.settings}
+          galleryImages={[sample, images[0]]}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByText("Sample")).toHaveLength(1);
   });
 });
 

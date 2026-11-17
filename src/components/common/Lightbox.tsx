@@ -121,7 +121,7 @@ export function Lightbox({
         onClick={(event) => {
           if (event.target === event.currentTarget) onClose();
         }}
-        className="flex min-h-0 flex-1 touch-pan-y items-center justify-center gap-2 px-2 sm:gap-4 sm:px-6"
+        className="relative flex min-h-0 flex-1 touch-pan-y items-center justify-center gap-2 px-2 sm:gap-4 sm:px-6"
       >
         {several ? (
           <button

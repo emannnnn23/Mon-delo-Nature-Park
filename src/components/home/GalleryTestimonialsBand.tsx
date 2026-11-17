@@ -5,6 +5,7 @@ import { LeafDecor } from "../common/LeafDecor";
 import { Lightbox } from "../common/Lightbox";
 import { PlaceholderImage } from "../common/PlaceholderImage";
 import { ResponsiveImage } from "../common/ResponsiveImage";
+import { SampleTag } from "../common/SampleTag";
 import type {
   GalleryImage,
   PageSection,
@@ -71,7 +72,7 @@ function Mosaic({ images }: { images: GalleryImage[] }) {
         {images.slice(0, MOSAIC_AREAS.length).map((item, i) => (
           <li
             key={item.id}
-            className={`overflow-hidden rounded-md ${
+            className={`relative ${
               full ? AREA_CLASS[MOSAIC_AREAS[i]] : "aspect-[4/3]"
             }`}
           >
@@ -83,7 +84,7 @@ function Mosaic({ images }: { images: GalleryImage[] }) {
                 event.currentTarget.focus();
                 setOpenIndex(i);
               }}
-              className="block h-full w-full cursor-zoom-in"
+              className="block h-full w-full cursor-zoom-in overflow-hidden rounded-md"
             >
               <ResponsiveImage
                 asset={item.image}
@@ -94,6 +95,9 @@ function Mosaic({ images }: { images: GalleryImage[] }) {
                 }
               />
             </button>
+            {item.isSample ? (
+              <SampleTag className="pointer-events-none absolute top-2 left-2" />
+            ) : null}
           </li>
         ))}
       </ul>

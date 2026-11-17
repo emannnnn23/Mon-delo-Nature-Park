@@ -4,6 +4,7 @@ import { PageHeader } from "../components/common/PageHeader";
 import { PlaceholderImage } from "../components/common/PlaceholderImage";
 import { CategoryFilter } from "../components/gallery/CategoryFilter";
 import { GalleryGrid } from "../components/gallery/GalleryGrid";
+import { useHydrated } from "../hooks/useHydrated";
 import { resolveCategory } from "../lib/gallery";
 import type {
   GalleryCategory,
@@ -29,20 +30,27 @@ export function GalleryPage({ intro, categories, images }: GalleryPageProps) {
   const usedCategories = categories.filter((category) =>
     images.some((item) => item.categoryId === category.id),
   );
-  const activeId = resolveCategory(
-    searchParams.get("category"),
-    usedCategories,
-  );
+  // The prerendered page is always All; apply the URL's category only after
+  // hydration so the first client render matches the server markup.
+  const hydrated = useHydrated();
+  const activeId = hydrated
+    ? resolveCategory(searchParams.get("category"), usedCategories)
+    : null;
   const shown =
     activeId === null
       ? images
       : images.filter((item) => item.categoryId === activeId);
 
   const select = (category: GalleryCategory | null) => {
-    setSearchParams(category ? { category: category.slug } : {}, {
-      replace: true,
-      preventScrollReset: true,
-    });
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (category) next.set("category", category.slug);
+        else next.delete("category");
+        return next;
+      },
+      { replace: true, preventScrollReset: true },
+    );
   };
 
   return (

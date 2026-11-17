@@ -16,12 +16,15 @@ export type VisitPageProps = {
   sections: PageSection[];
   faqs: Faq[];
   settings: SiteSettings;
-  /** Sends the contact form. Phase 4 supplies the real one. */
+  /** Sends the contact form. Phase 4 supplies it; until then the form is closed. */
   onSubmit?: ContactSubmit;
 };
 
-// Phase 2 has no backend: the form behaves as if every message went through.
-const stubSubmit: ContactSubmit = () => Promise.resolve("ok");
+/** Neutral structural labels, used only when a section has no heading. */
+const FALLBACK_LABEL: Record<string, string> = {
+  intro: "Plan Your Visit",
+  getting_here: "Getting Here",
+};
 
 const contactClass =
   "inline-flex min-h-11 items-center gap-3 text-ink-900 underline decoration-gold-500/0 decoration-2 underline-offset-4 transition-colors hover:decoration-gold-500";
@@ -35,7 +38,7 @@ function TextSection({ section }: { section: PageSection }) {
         id={id}
         className="font-serif text-3xl leading-tight font-bold text-balance text-forest-900 md:text-4xl"
       >
-        {section.heading}
+        {section.heading ?? FALLBACK_LABEL[section.key]}
       </h2>
       {section.isSample ? <SampleTag /> : null}
       {paragraphs.length > 0 ? (
@@ -58,13 +61,13 @@ export function VisitPage({
   sections,
   faqs,
   settings,
-  onSubmit = stubSubmit,
+  onSubmit,
 }: VisitPageProps) {
   const { addressLine, plusCode, phone, email, openingHours, mapsEmbedUrl } =
     settings;
   const textSections = ["intro", "getting_here"]
     .map((key) => sections.find((s) => s.key === key))
-    .filter((s): s is PageSection => s !== undefined && s.heading !== null);
+    .filter((s): s is PageSection => s !== undefined);
 
   return (
     <>

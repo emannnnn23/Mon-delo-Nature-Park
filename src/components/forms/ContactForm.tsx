@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { contactSchema, type ContactInput } from "../../lib/validation/contact";
+import { useHydrated } from "../../hooks/useHydrated";
 import { Button } from "../common/Button";
 import { Field } from "./Field";
 
@@ -13,7 +14,8 @@ export type ContactSubmit = (
 ) => Promise<ContactOutcome>;
 
 type ContactFormProps = {
-  onSubmit: ContactSubmit;
+  /** Without a handler the form cannot be sent and says so. */
+  onSubmit?: ContactSubmit;
 };
 
 type FieldName = "fullName" | "email" | "phone" | "subject" | "message";
@@ -50,15 +52,20 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
   const [errors, setErrors] = useState<Errors>({});
   const mountedAt = useRef<number | null>(null);
   const sending = useRef(false);
+  const hydrated = useHydrated();
 
-  // Set in an effect so server rendering and hydration stay identical.
+  // The mount time is set in an effect so server rendering and hydration stay
+  // identical. `hydrated` is false on the server and during hydration, and the
+  // submit button stays disabled until it flips: a prerendered form submitted
+  // before the page hydrates would otherwise reload the page with the typed
+  // details in the address bar.
   useEffect(() => {
     mountedAt.current = Date.now();
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (sending.current) return;
+    if (sending.current || !onSubmit) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     const text = (key: string) => {
@@ -116,11 +123,13 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
 
   return (
     <form
+      method="post"
       noValidate
       onSubmit={handleSubmit}
       aria-busy={isSending}
       className="relative grid gap-5"
     >
+      <p className="text-sm text-ink-600">* required</p>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
           label="Full name"
@@ -171,16 +180,31 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
       <div aria-hidden="true" className={HONEYPOT_WRAPPER}>
         <label>
           Leave this field empty
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bwignore
+            data-form-type="other"
+          />
         </label>
       </div>
+
+      {onSubmit ? null : (
+        <p className="text-sm font-medium text-ink-900">
+          Online messages open soon — please check back.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-4">
         <Button
           type="submit"
           variant="gold"
           icon={Send}
-          disabled={isSending}
+          disabled={isSending || !hydrated || !onSubmit}
           className="disabled:cursor-not-allowed disabled:opacity-60"
         >
           Send Message

@@ -213,13 +213,50 @@ describe("VisitPage", () => {
     }
   });
 
-  it("has the contact form under Send Us a Message", () => {
+  it("has the contact form under Send Us a Message, closed until a handler is passed", () => {
     renderVisit();
     expect(
       screen.getByRole("heading", { level: 2, name: "Send Us a Message" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /send message/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText("Online messages open soon — please check back."),
     ).toBeInTheDocument();
+  });
+
+  it("uses neutral labels for sections with no heading", () => {
+    renderVisit({
+      sections: [
+        {
+          key: "getting_here",
+          eyebrow: null,
+          heading: null,
+          body: "Take the road.",
+          ctaLabel: null,
+          ctaHref: null,
+          image: null,
+          isSample: false,
+        },
+        {
+          key: "intro",
+          eyebrow: null,
+          heading: null,
+          body: "Welcome.",
+          ctaLabel: null,
+          ctaHref: null,
+          image: null,
+          isSample: false,
+        },
+      ],
+    });
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Plan Your Visit" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Getting Here" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Take the road.")).toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToString } from "react-dom/server";
 
 import { ContactForm, type ContactSubmit } from "./ContactForm";
 
@@ -53,10 +54,59 @@ describe("ContactForm", () => {
     expect(trap).not.toBeNull();
     expect(trap).toHaveAttribute("tabindex", "-1");
     expect(trap).toHaveAttribute("autocomplete", "off");
-    expect(trap?.closest("[aria-hidden='true']")).not.toBeNull();
+    expect(trap).toHaveAttribute("data-1p-ignore");
+    expect(trap).toHaveAttribute("data-lpignore", "true");
+    expect(trap).toHaveAttribute("data-bwignore");
+    expect(trap).toHaveAttribute("data-form-type", "other");
+    const wrapper = trap?.closest("[aria-hidden='true']");
+    expect(wrapper).not.toBeNull();
+    expect(wrapper).toContainElement(trap);
+    // The wrapper is hidden from the accessibility tree, so the label that
+    // would name the trap is not exposed as a textbox.
+    expect(wrapper?.textContent).toMatch(/leave this field empty/i);
     expect(
-      screen.queryByRole("textbox", { name: /website/i }),
+      screen.queryByRole("textbox", { name: /leave this field empty/i }),
     ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("textbox")).toHaveLength(5);
+  });
+
+  it("posts, so a submit before hydration never puts details in the URL", () => {
+    const { container } = render(
+      <ContactForm onSubmit={vi.fn<ContactSubmit>()} />,
+    );
+    expect(container.querySelector("form")).toHaveAttribute("method", "post");
+  });
+
+  it("renders the submit button disabled before hydration, enabled after", () => {
+    const html = renderToString(
+      <ContactForm onSubmit={vi.fn<ContactSubmit>()} />,
+    );
+    expect(html).toMatch(/<button[^>]*disabled/);
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    expect(sendButton()).toBeEnabled();
+  });
+
+  it("notes that starred fields are required", () => {
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    expect(screen.getByText("* required")).toBeInTheDocument();
+  });
+
+  it("without a handler stays closed: note shown, button disabled, nothing sent", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ContactForm />);
+    expect(
+      screen.getByText("Online messages open soon — please check back."),
+    ).toBeInTheDocument();
+    expect(sendButton()).toBeDisabled();
+    expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
+    await fillValid(user);
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    expect(screen.queryByText(/thank you/i)).not.toBeInTheDocument();
+  });
+
+  it("with a handler shows no pre-launch note", () => {
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    expect(screen.queryByText(/open soon/i)).not.toBeInTheDocument();
   });
 
   it("submits valid input with an empty honeypot and the elapsed time", async () => {
@@ -143,13 +193,15 @@ describe("ContactForm", () => {
         }),
     );
     const user = userEvent.setup();
-    render(<ContactForm onSubmit={onSubmit} />);
+    const { container } = render(<ContactForm onSubmit={onSubmit} />);
     await fillValid(user);
-    const button = sendButton();
-    await user.click(button);
-    await waitFor(() => expect(button).toBeDisabled());
-    await user.click(button);
+    const form = container.querySelector("form") as HTMLFormElement;
+    // Two submits in the same tick, before React can re-render the disabled
+    // button: only the ref guard stops the second.
+    fireEvent.submit(form);
+    fireEvent.submit(form);
     expect(onSubmit).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(sendButton()).toBeDisabled());
     resolve("ok");
     await screen.findByText(/thank you/i);
     expect(onSubmit).toHaveBeenCalledTimes(1);

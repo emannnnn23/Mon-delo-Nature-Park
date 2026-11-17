@@ -1,6 +1,14 @@
 import { render, screen, within } from "@testing-library/react";
 import { createElement } from "react";
-import { MemoryRouter, createRoutesStub, useRouteError } from "react-router";
+import {
+  MemoryRouter,
+  Outlet,
+  createRoutesStub,
+  useRouteError,
+} from "react-router";
+
+import { PublicLayout } from "~/components/layout/PublicLayout";
+import { ErrorContent } from "./ErrorPage";
 
 import { placeholders } from "~/content/placeholders";
 import { findSection } from "~/lib/homeContent";
@@ -189,6 +197,50 @@ describe("detail route", () => {
     render(<Stub initialEntries={["/discover/nope"]} />);
     expect(
       await screen.findByRole("heading", { level: 1, name: "Page not found" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders exactly one main landmark when a 404 renders inside the layout", async () => {
+    function Boundary() {
+      return createElement(detail.ErrorBoundary as never, {
+        error: useRouteError(),
+      });
+    }
+    const Stub = createRoutesStub([
+      {
+        Component: () => (
+          <PublicLayout
+            settings={placeholders.settings}
+            announcement={null}
+            overHero={false}
+          >
+            <Outlet />
+          </PublicLayout>
+        ),
+        children: [
+          {
+            path: "/discover/:slug",
+            loader: ({ params }) => detail.loader({ params } as never),
+            Component: () => null,
+            ErrorBoundary: Boundary,
+          },
+        ],
+      },
+    ]);
+    render(<Stub initialEntries={["/discover/nope"]} />);
+    await screen.findByRole("heading", { level: 1, name: "Page not found" });
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+  });
+
+  it("generic error content has no main landmark", () => {
+    render(
+      <MemoryRouter>
+        <ErrorContent />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("main")).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Something went wrong" }),
     ).toBeInTheDocument();
   });
 

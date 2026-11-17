@@ -52,7 +52,7 @@ export function AttractionPage({ attraction }: AttractionPageProps) {
       <div className="bg-ivory-50 py-12 md:py-16">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           {paragraphs.length > 0 ? (
-            <div className="max-w-prose space-y-5 font-serif text-lg leading-[1.75] text-ink-900">
+            <div className="max-w-prose space-y-5 text-lg leading-[1.75] text-ink-900">
               {paragraphs.map((text, index) => (
                 <p key={index} className="break-words whitespace-pre-line">
                   {text}

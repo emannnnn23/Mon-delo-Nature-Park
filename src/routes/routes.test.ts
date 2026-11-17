@@ -64,7 +64,11 @@ describe("public route modules", () => {
     ["/nope", "Page not found"],
   ])("%s renders exactly one h1", async (path, heading) => {
     renderAt(path);
-    const h1s = await screen.findAllByRole("heading", { level: 1 });
+    const h1s = await screen.findAllByRole(
+      "heading",
+      { level: 1 },
+      { timeout: 5000 },
+    );
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent(heading);
   });

@@ -159,11 +159,30 @@ describe("AttractionPage", () => {
   it("renders additional images with captions", () => {
     renderDetail({
       ...first,
-      images: [{ image: image("a"), caption: "The ridge at dusk" }],
+      images: [
+        { id: "row-a", image: image("a"), caption: "The ridge at dusk" },
+      ],
     });
     const list = screen.getByRole("list", { name: "More photos" });
     expect(within(list).getByAltText("Photo a")).toBeInTheDocument();
     expect(within(list).getByText("The ridge at dusk")).toBeInTheDocument();
+  });
+
+  it("renders the same media twice, keyed on the row id, without key warnings", () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    renderDetail({
+      ...first,
+      images: [
+        { id: "row-1", image: image("same"), caption: "Morning" },
+        { id: "row-2", image: image("same"), caption: "Evening" },
+      ],
+    });
+    const list = screen.getByRole("list", { name: "More photos" });
+    expect(within(list).getAllByAltText("Photo same")).toHaveLength(2);
+    expect(
+      errors.mock.calls.filter((call) => String(call[0]).includes("key")),
+    ).toEqual([]);
+    errors.mockRestore();
   });
 
   it("does not put a placeholder chip behind the heading when there is no cover", () => {

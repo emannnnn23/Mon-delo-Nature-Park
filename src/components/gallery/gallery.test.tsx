@@ -369,8 +369,8 @@ describe("Lightbox wiring", () => {
           attraction={{
             ...first,
             images: [
-              { image: asset("x"), caption: "First" },
-              { image: asset("y"), caption: null },
+              { id: "row-x", image: asset("x"), caption: "First" },
+              { id: "row-y", image: asset("y"), caption: null },
             ],
           }}
         />

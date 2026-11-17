@@ -73,7 +73,8 @@ export type Attraction = {
   description: string | null;
   icon: AttractionIcon | null;
   cover: MediaAsset | null;
-  images: { image: MediaAsset; caption: string | null }[];
+  /** Extra photos; `id` is the attraction_images row, not the media asset. */
+  images: { id: string; image: MediaAsset; caption: string | null }[];
   isFeatured: boolean;
   isSample: boolean;
 };

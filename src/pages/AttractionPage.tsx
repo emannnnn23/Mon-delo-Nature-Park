@@ -79,8 +79,8 @@ export function AttractionPage({ attraction }: AttractionPageProps) {
                 aria-label="More photos"
                 className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
               >
-                {images.map(({ image, caption }, index) => (
-                  <li key={image.id}>
+                {images.map(({ id, image, caption }, index) => (
+                  <li key={id}>
                     <figure>
                       <button
                         type="button"

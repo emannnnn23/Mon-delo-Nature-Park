@@ -127,17 +127,40 @@ describe("public route modules", () => {
     expect("loader" in notFound).toBe(false);
   });
 
-  it("no route module exports a clientLoader yet", () => {
-    for (const mod of [
-      home,
-      discover,
-      detail,
-      gallery,
-      about,
-      visit,
-      notFound,
-    ]) {
+  it("only the detail route exports a clientLoader", () => {
+    for (const mod of [home, discover, gallery, about, visit, notFound]) {
       expect("clientLoader" in mod).toBe(false);
     }
+  });
+
+  // A slug that was not prerendered is served the SPA fallback, which has no
+  // `.data` file to fetch; the clientLoader must answer it in the browser.
+  describe("detail clientLoader", () => {
+    type ClientLoader = ((args: { params: Params }) => unknown) & {
+      hydrate?: boolean;
+    };
+    const clientLoader = (detail as unknown as { clientLoader: ClientLoader })
+      .clientLoader;
+
+    it("runs on hydration", () => {
+      expect(clientLoader.hydrate).toBe(true);
+    });
+
+    it("returns the attraction for a known slug", () => {
+      if (!known) throw new Error("no placeholder attraction");
+      expect(clientLoader({ params: { slug: known.slug } })).toEqual({
+        attraction: known,
+      });
+    });
+
+    it("throws a 404 response for an unknown slug", () => {
+      let thrown: unknown;
+      try {
+        clientLoader({ params: { slug: "not-a-real-place" } });
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toMatchObject({ init: { status: 404 } });
+    });
   });
 });

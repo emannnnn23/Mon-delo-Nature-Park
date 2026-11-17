@@ -224,6 +224,17 @@ describe("Gallery and testimonials band", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows a whole-number rating with one decimal", () => {
+    renderHome({
+      testimonials: [],
+      settings: { ...base.settings, googleRating: 4 },
+    });
+    expect(screen.getByText("4.0 / 5")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "4.0 out of 5 stars" }),
+    ).toBeInTheDocument();
+  });
+
   it("links to Google reviews when a listing URL is set", () => {
     renderHome({
       testimonials: [],

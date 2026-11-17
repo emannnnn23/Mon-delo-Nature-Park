@@ -38,7 +38,7 @@ function Stars({ rating }: { rating: number }) {
   return (
     <span
       role="img"
-      aria-label={`${rating} out of 5 stars`}
+      aria-label={`${rating.toFixed(1)} out of 5 stars`}
       className="inline-flex gap-0.5"
     >
       {[0, 1, 2, 3, 4].map((i) => {
@@ -71,7 +71,7 @@ export function GoogleRating({ rating, reviewCount }: GoogleRatingProps) {
     <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-ivory-50">
       <GoogleMark />
       <span className="sr-only">Google rating:</span>
-      <span className="font-semibold">{`${rating} / 5`}</span>
+      <span className="font-semibold">{`${rating.toFixed(1)} / 5`}</span>
       <Stars rating={rating} />
       {reviewCount !== null ? (
         <span className="text-sm text-ivory-50/80">{`(${reviewCount} ${reviewCount === 1 ? "review" : "reviews"})`}</span>

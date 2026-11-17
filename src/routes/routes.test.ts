@@ -14,6 +14,7 @@ import * as detail from "./discover.$slug";
 import * as gallery from "./gallery";
 import * as home from "./home";
 import * as notFound from "./not-found";
+import * as publicLayout from "./_public";
 import * as visit from "./visit";
 import { placeholders } from "~/content/placeholders";
 
@@ -162,5 +163,20 @@ describe("public route modules", () => {
       }
       expect(thrown).toMatchObject({ init: { status: 404 } });
     });
+  });
+});
+
+describe("public layout route", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("puts the footer year in both loaders, so prerender and hydration agree", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-06-01T12:00:00Z"));
+    const client = publicLayout.clientLoader as unknown as () => {
+      year: number;
+    };
+    const server = publicLayout.loader as unknown as () => { year: number };
+    expect(server().year).toBe(2030);
+    expect(client().year).toBe(2030);
   });
 });

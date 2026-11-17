@@ -112,7 +112,9 @@ describe("MobileMenu", () => {
 
 describe("SiteFooter", () => {
   it("has no tel: link when phone is null", () => {
-    inRouter(<SiteFooter settings={{ ...settings, phone: null }} />);
+    inRouter(
+      <SiteFooter settings={{ ...settings, phone: null }} year={2031} />,
+    );
     expect(document.querySelector('a[href^="tel:"]')).toBeNull();
   });
 
@@ -120,6 +122,7 @@ describe("SiteFooter", () => {
     inRouter(
       <SiteFooter
         settings={{ ...settings, phone: "+63 900 000 0000", email: "a@b.ph" }}
+        year={2031}
       />,
     );
     expect(document.querySelector('a[href^="tel:"]')).not.toBeNull();
@@ -139,6 +142,7 @@ describe("SiteFooter", () => {
             youtube: null,
           },
         }}
+        year={2031}
       />,
     );
     const fb = screen.getByRole("link", { name: "Facebook" });
@@ -150,20 +154,25 @@ describe("SiteFooter", () => {
   });
 
   it("uses the fallback tagline, the configured one when set, and the year", () => {
-    const { unmount } = inRouter(<SiteFooter settings={settings} />);
+    const { unmount } = inRouter(
+      <SiteFooter settings={settings} year={2031} />,
+    );
     expect(
       screen.getByText("Nature. Relaxation. Unforgettable Moments."),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(new RegExp(`© ${new Date().getFullYear()} Mondelos`)),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/© 2031 Mondelos/)).toBeInTheDocument();
     unmount();
-    inRouter(<SiteFooter settings={{ ...settings, tagline: "Rest easy." }} />);
+    inRouter(
+      <SiteFooter
+        settings={{ ...settings, tagline: "Rest easy." }}
+        year={2031}
+      />,
+    );
     expect(screen.getByText("Rest easy.")).toBeInTheDocument();
   });
 
   it("links the five nav items", () => {
-    inRouter(<SiteFooter settings={settings} />);
+    inRouter(<SiteFooter settings={settings} year={2031} />);
     const nav = screen.getByRole("navigation", { name: "Footer" });
     expect(within(nav).getAllByRole("link")).toHaveLength(NAV_LINKS.length);
   });
@@ -253,7 +262,12 @@ describe("AnnouncementStrip", () => {
 describe("PublicLayout", () => {
   it("has a skip link to #main and a main landmark with that id", () => {
     inRouter(
-      <PublicLayout settings={settings} announcement={null} overHero={false}>
+      <PublicLayout
+        settings={settings}
+        announcement={null}
+        overHero={false}
+        year={2031}
+      >
         <p>page</p>
       </PublicLayout>,
     );

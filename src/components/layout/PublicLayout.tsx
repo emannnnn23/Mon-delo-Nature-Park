@@ -9,6 +9,8 @@ type PublicLayoutProps = {
   announcement: Announcement | null;
   /** True when the page opens with a hero the header should float over. */
   overHero: boolean;
+  /** Copyright year shown in the footer. */
+  year: number;
   children: ReactNode;
 };
 
@@ -20,6 +22,7 @@ export function PublicLayout({
   settings,
   announcement,
   overHero,
+  year,
   children,
 }: PublicLayoutProps) {
   return (
@@ -35,7 +38,7 @@ export function PublicLayout({
       <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
         {children}
       </main>
-      <SiteFooter settings={settings} />
+      <SiteFooter settings={settings} year={year} />
     </div>
   );
 }

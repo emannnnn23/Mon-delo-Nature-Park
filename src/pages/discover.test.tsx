@@ -246,6 +246,7 @@ describe("detail route", () => {
             settings={placeholders.settings}
             announcement={null}
             overHero={false}
+            year={2031}
           >
             <Outlet />
           </PublicLayout>

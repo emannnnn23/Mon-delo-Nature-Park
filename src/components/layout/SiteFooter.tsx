@@ -12,7 +12,11 @@ import {
   YoutubeIcon,
 } from "./SocialIcons";
 
-type SiteFooterProps = { settings: SiteSettings };
+type SiteFooterProps = {
+  settings: SiteSettings;
+  /** Copyright year, fixed by the route loader so server and client agree. */
+  year: number;
+};
 
 const FALLBACK_TAGLINE = "Nature. Relaxation. Unforgettable Moments.";
 
@@ -31,7 +35,7 @@ const linkClass =
   "inline-flex min-h-11 items-center text-ivory-50/90 transition-colors hover:text-gold-500";
 
 /** Green band closing every public page. Contact and social rows appear only when set. */
-export function SiteFooter({ settings }: SiteFooterProps) {
+export function SiteFooter({ settings, year }: SiteFooterProps) {
   const { addressLine, phone, email, mapsListingUrl, socials } = settings;
   const socialLinks = SOCIALS.filter(({ key }) => socials[key]);
 
@@ -122,8 +126,7 @@ export function SiteFooter({ settings }: SiteFooterProps) {
         </div>
 
         <p className="mt-10 border-t border-gold-500/40 pt-6 text-sm text-ivory-50/80">
-          © {new Date().getFullYear()} Mondelos Nature Park. All rights
-          reserved.
+          © {year} Mondelos Nature Park. All rights reserved.
         </p>
       </div>
     </footer>

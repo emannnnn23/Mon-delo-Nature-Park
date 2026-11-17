@@ -9,6 +9,9 @@ function chromeData() {
   return {
     settings: placeholders.settings,
     announcement: placeholders.announcement,
+    // Read once per build for the prerendered pages; the hydration pass reads
+    // it again, so the two agree unless a visit straddles New Year.
+    year: new Date().getFullYear(),
   };
 }
 
@@ -33,6 +36,7 @@ export default function Public({ loaderData }: Route.ComponentProps) {
       settings={loaderData.settings}
       announcement={loaderData.announcement}
       overHero={pathname === "/"}
+      year={loaderData.year}
     >
       <Outlet />
     </PublicLayout>

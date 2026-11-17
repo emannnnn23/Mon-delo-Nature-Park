@@ -57,7 +57,7 @@ function Mosaic({ images }: { images: GalleryImage[] }) {
             <PlaceholderImage
               label="Gallery photos coming soon"
               className={
-                area === "a" ? "xl:[&>span]:hidden" : "[&>span]:hidden"
+                area === "a" ? "lg:[&>span]:hidden" : "[&>span]:hidden"
               }
             />
           </div>

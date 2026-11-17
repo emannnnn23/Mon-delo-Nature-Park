@@ -18,7 +18,7 @@ type AttractionCardProps = {
 
 const LAYOUT: Record<
   AttractionCardVariant,
-  { card: string; media: string; title: string }
+  { card: string; media: string; title: string; placeholder?: string }
 > = {
   default: {
     card: "flex-col",
@@ -34,6 +34,8 @@ const LAYOUT: Record<
     card: "flex-col lg:flex-row",
     media: "aspect-[4/3] lg:aspect-auto lg:w-[46%] lg:shrink-0",
     title: "text-xl md:text-2xl",
+    // The side image is too narrow for the "Photo coming soon" pill.
+    placeholder: "lg:[&>span]:hidden",
   },
 };
 
@@ -54,7 +56,11 @@ export function AttractionCard({
     >
       <div className={`relative overflow-hidden ${layout.media}`}>
         <div className="h-full transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
-          <ResponsiveImage asset={attraction.cover} sizes={sizes} />
+          <ResponsiveImage
+            asset={attraction.cover}
+            sizes={sizes}
+            className={layout.placeholder}
+          />
         </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col items-start gap-3 p-6 lg:p-7">

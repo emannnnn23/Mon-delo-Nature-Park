@@ -215,6 +215,26 @@ describe("Discover preview", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("lays two featured attractions out in two columns, with no empty third", () => {
+    renderHome({ featuredAttractions: base.featuredAttractions.slice(0, 2) });
+    const list = screen
+      .getByRole("link", { name: /hilltop viewpoint/i })
+      .closest("ul");
+    // md:grid-cols-2 carries on through lg: no three-column override.
+    expect(list).toHaveClass("md:grid-cols-2");
+    expect(list?.className).not.toMatch(/lg:grid-cols|grid-rows/);
+  });
+
+  it("shows a single featured attraction as one wide card", () => {
+    renderHome({ featuredAttractions: base.featuredAttractions.slice(0, 1) });
+    const link = screen.getByRole("link", { name: /hilltop viewpoint/i });
+    const list = link.closest("ul");
+    expect(list?.className).not.toMatch(/grid-cols-[23]|overflow-x-auto/);
+    expect(link.closest("li")?.className).not.toContain("w-[85%]");
+    // The compact card lays its image beside the text from lg.
+    expect(link.closest("article")).toHaveClass("lg:flex-row");
+  });
+
   it("lets a very long attraction name wrap", () => {
     const name = "A".repeat(40) + " " + "B".repeat(39);
     expect(name).toHaveLength(80);

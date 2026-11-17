@@ -9,15 +9,15 @@ import { Link, type LinkProps } from "react-router";
 export type ButtonVariant = "gold" | "outline-light" | "outline-dark";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  gold: "border-gold-500 bg-gold-500 text-ink-900 hover:brightness-110",
+  gold: "border-gold-500 bg-gold-500 text-ink-900 hover:brightness-110 disabled:hover:brightness-100",
   "outline-light":
-    "border-ivory-50/80 text-ivory-50 hover:border-ivory-50 hover:bg-ivory-50/10",
+    "border-ivory-50/80 text-ivory-50 hover:border-ivory-50 hover:bg-ivory-50/10 disabled:hover:border-ivory-50/80 disabled:hover:bg-transparent",
   "outline-dark":
-    "border-forest-900 text-forest-900 hover:bg-forest-900 hover:text-ivory-50",
+    "border-forest-900 text-forest-900 hover:bg-forest-900 hover:text-ivory-50 disabled:hover:bg-transparent disabled:hover:text-forest-900",
 };
 
 const BASE =
-  "group inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-6 py-2.5 text-sm font-semibold transition duration-200 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100";
+  "group inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-6 py-2.5 text-sm font-semibold transition duration-200 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100";
 
 type Shared = {
   variant?: ButtonVariant;

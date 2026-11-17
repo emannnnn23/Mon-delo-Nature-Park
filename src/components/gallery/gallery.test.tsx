@@ -204,6 +204,23 @@ describe("Lightbox", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("shows the placeholder instead of a bucket-root URL when an image has no variants", () => {
+    render(
+      <Lightbox
+        items={[{ image: { ...asset("z"), variants: {} }, caption: "No file" }]}
+        index={0}
+        onClose={() => {}}
+        onIndexChange={() => {}}
+      />,
+    );
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.querySelector("img")).toBeNull();
+    expect(
+      within(dialog).getByRole("img", { name: "Photo coming soon" }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("No file")).toBeInTheDocument();
+  });
+
   it("shows the largest variant of the current image", () => {
     render(<Harness start={1} />);
     const img = within(screen.getByRole("dialog")).getByAltText("Photo b");

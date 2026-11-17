@@ -1,6 +1,17 @@
 import { useEffect, useRef, type RefObject } from "react";
 
-const FOCUSABLE = "a[href], button:not([disabled])";
+const FOCUSABLE = [
+  "a[href]",
+  "area[href]",
+  "button:not([disabled])",
+  'input:not([disabled]):not([type="hidden"])',
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "summary",
+  "iframe",
+  '[tabindex]:not([tabindex="-1"])',
+  '[contenteditable="true"]',
+].join(", ");
 
 type FocusTrapOptions = {
   /** Focused when the trap activates. Defaults to nothing. */

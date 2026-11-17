@@ -5,6 +5,7 @@ import { useFocusTrap } from "../../hooks/useFocusTrap";
 import { publicMediaUrl } from "../../lib/media";
 import type { MediaAsset } from "../../types/content";
 import { pickFallbackSrc } from "../../utils/imageVariants";
+import { PlaceholderImage } from "./PlaceholderImage";
 
 export type LightboxItem = { image: MediaAsset; caption: string | null };
 
@@ -133,15 +134,22 @@ export function Lightbox({
             <ChevronLeft aria-hidden="true" className="size-7" />
           </button>
         ) : null}
-        <img
-          key={image.id}
-          src={publicMediaUrl(pickFallbackSrc(image.variants, 2400))}
-          alt={image.alt}
-          width={image.width}
-          height={image.height}
-          decoding="async"
-          className="max-h-full min-w-0 animate-fade-in rounded-sm object-contain motion-reduce:animate-none"
-        />
+        {Object.keys(image.variants).length === 0 ? (
+          // No file to show: never point an <img> at the bucket root.
+          <div className="aspect-[4/3] max-h-full w-full max-w-3xl overflow-hidden rounded-sm">
+            <PlaceholderImage />
+          </div>
+        ) : (
+          <img
+            key={image.id}
+            src={publicMediaUrl(pickFallbackSrc(image.variants, 2400))}
+            alt={image.alt}
+            width={image.width}
+            height={image.height}
+            decoding="async"
+            className="max-h-full min-w-0 animate-fade-in rounded-sm object-contain motion-reduce:animate-none"
+          />
+        )}
         {several ? (
           <button
             type="button"

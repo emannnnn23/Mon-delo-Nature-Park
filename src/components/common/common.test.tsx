@@ -67,6 +67,18 @@ describe("Button", () => {
   });
 });
 
+describe("Button disabled", () => {
+  it("carries the disabled attribute and disabled styling", () => {
+    render(<Button disabled>Send</Button>);
+    const button = screen.getByRole("button", { name: "Send" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveClass(
+      "disabled:cursor-not-allowed",
+      "disabled:opacity-60",
+    );
+  });
+});
+
 describe("SampleTag", () => {
   it("shows the word Sample", () => {
     render(<SampleTag />);

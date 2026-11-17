@@ -32,6 +32,8 @@ const contactClass =
 function TextSection({ section }: { section: PageSection }) {
   const id = `visit-${section.key}`;
   const paragraphs = splitParagraphs(section.body);
+  // A heading with nothing under it is noise: leave the section out.
+  if (paragraphs.length === 0) return null;
   return (
     <section aria-labelledby={id} className="flex flex-col items-start gap-3">
       <h2
@@ -41,13 +43,11 @@ function TextSection({ section }: { section: PageSection }) {
         {section.heading ?? FALLBACK_LABEL[section.key]}
       </h2>
       {section.isSample ? <SampleTag /> : null}
-      {paragraphs.length > 0 ? (
-        <div className="max-w-prose space-y-4 text-base leading-relaxed text-ink-600 md:text-lg">
-          {paragraphs.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-        </div>
-      ) : null}
+      <div className="max-w-prose space-y-4 text-base leading-relaxed text-ink-600 md:text-lg">
+        {paragraphs.map((p, i) => (
+          <p key={i}>{p}</p>
+        ))}
+      </div>
     </section>
   );
 }

@@ -9,10 +9,13 @@ import type { Faq, PageSection } from "~/types/content";
 import { AboutPage } from "./AboutPage";
 import { VisitPage, type VisitPageProps } from "./VisitPage";
 
-function renderAbout(sections: PageSection[] = placeholders.sections.about) {
+function renderAbout(
+  sections: PageSection[] = placeholders.sections.about,
+  hasAttractions = true,
+) {
   return render(
     <MemoryRouter>
-      <AboutPage sections={sections} />
+      <AboutPage sections={sections} hasAttractions={hasAttractions} />
     </MemoryRouter>,
   );
 }
@@ -41,6 +44,7 @@ describe("routes", () => {
   it("load their content at build time", () => {
     expect(aboutRoute.loader()).toEqual({
       sections: placeholders.sections.about,
+      hasAttractions: true,
     });
     expect(visitRoute.loader()).toEqual({
       sections: placeholders.sections.visit,
@@ -104,6 +108,44 @@ describe("AboutPage", () => {
     expect(screen.getByText("Second paragraph.")).toBeInTheDocument();
   });
 
+  const emptySection = (key: string, heading: string): PageSection => ({
+    key,
+    eyebrow: null,
+    heading,
+    body: null,
+    ctaLabel: null,
+    ctaHref: null,
+    image: null,
+    isSample: false,
+  });
+
+  it("renders nothing for a section with neither body nor image", () => {
+    renderAbout([
+      emptySection("intro", "A Quiet Welcome"),
+      emptySection("story", "Our Story"),
+      { ...emptySection("mission", "Our Mission"), body: "We care for it." },
+    ]);
+    expect(
+      screen.queryByRole("heading", { name: "Our Story" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "A Quiet Welcome" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Our Mission" }),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves out Facilities and highlights when there is nothing to discover", () => {
+    renderAbout(placeholders.sections.about, false);
+    expect(
+      screen.queryByRole("heading", { name: "Facilities and highlights" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /discover the park/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("ends with a link to Discover", () => {
     renderAbout();
     expect(
@@ -141,6 +183,17 @@ describe("VisitPage", () => {
     // With nothing else to list, there is no separate address section.
     expect(
       screen.queryByRole("heading", { name: /address and contact/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders nothing for a text section without a body", () => {
+    renderVisit({
+      sections: placeholders.sections.visit.map((s) =>
+        s.key === "getting_here" ? { ...s, body: null } : s,
+      ),
+    });
+    expect(
+      screen.queryByRole("heading", { name: "Getting Here" }),
     ).not.toBeInTheDocument();
   });
 

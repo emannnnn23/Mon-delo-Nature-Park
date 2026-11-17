@@ -26,6 +26,14 @@ export function DiscoverPage({
         body={intro?.body}
       />
 
+      {attractions.length === 0 && experiences.length === 0 ? (
+        <div className="bg-ivory-50 py-14 md:py-20">
+          <p className="mx-auto max-w-7xl px-5 text-center text-lg text-ink-600 sm:px-8">
+            Attractions will be listed here soon.
+          </p>
+        </div>
+      ) : null}
+
       {attractions.length > 0 ? (
         <div className="bg-ivory-50 py-14 md:py-20">
           <div className="mx-auto max-w-7xl px-5 sm:px-8">

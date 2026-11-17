@@ -9,6 +9,8 @@ import { splitParagraphs } from "../utils/text";
 
 export type AboutPageProps = {
   sections: PageSection[];
+  /** Whether Discover has any attractions to link to. */
+  hasAttractions: boolean;
 };
 
 const PAGE_TITLE = "About the Park";
@@ -40,8 +42,13 @@ function Body({ text }: { text: string | null }) {
  * About: a forest header band, an introduction, then story, mission, vision
  * and surroundings in turn, each only when the park has provided it.
  */
-export function AboutPage({ sections }: AboutPageProps) {
-  const byKey = new Map(sections.map((s) => [s.key, s]));
+export function AboutPage({ sections, hasAttractions }: AboutPageProps) {
+  // A section with neither text nor a photo would be a bare heading.
+  const hasContent = (s: PageSection) =>
+    splitParagraphs(s.body).length > 0 || s.image !== null;
+  const byKey = new Map(
+    sections.filter(hasContent).map((s) => [s.key, s] as const),
+  );
   const intro = byKey.get("intro") ?? null;
   const rest = ORDER.filter((key) => key !== "intro")
     .map((key) => byKey.get(key))
@@ -121,23 +128,25 @@ export function AboutPage({ sections }: AboutPageProps) {
         );
       })}
 
-      <section
-        aria-labelledby="about-highlights"
-        data-surface="dark"
-        className="bg-forest-900 py-14 text-ivory-50 md:py-20"
-      >
-        <div className="mx-auto flex max-w-7xl flex-col items-start gap-6 px-5 sm:px-8 md:flex-row md:items-center md:justify-between">
-          <h2
-            id="about-highlights"
-            className="font-serif text-3xl leading-tight font-bold md:text-4xl"
-          >
-            Facilities and highlights
-          </h2>
-          <Button to="/discover" variant="gold" icon={ArrowRight}>
-            Discover the Park
-          </Button>
-        </div>
-      </section>
+      {hasAttractions ? (
+        <section
+          aria-labelledby="about-highlights"
+          data-surface="dark"
+          className="bg-forest-900 py-14 text-ivory-50 md:py-20"
+        >
+          <div className="mx-auto flex max-w-7xl flex-col items-start gap-6 px-5 sm:px-8 md:flex-row md:items-center md:justify-between">
+            <h2
+              id="about-highlights"
+              className="font-serif text-3xl leading-tight font-bold md:text-4xl"
+            >
+              Facilities and highlights
+            </h2>
+            <Button to="/discover" variant="gold" icon={ArrowRight}>
+              Discover the Park
+            </Button>
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }

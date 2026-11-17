@@ -15,7 +15,12 @@ export function meta() {
 
 // Build-time loader (ruling P2-R9). Phase 4 swaps placeholders for Supabase.
 export function loader() {
-  return { sections: placeholders.sections.about };
+  return {
+    sections: placeholders.sections.about,
+    hasAttractions: placeholders.attractions.some(
+      (a) => a.kind === "attraction",
+    ),
+  };
 }
 
 export default function About({ loaderData }: Route.ComponentProps) {

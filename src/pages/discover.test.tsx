@@ -100,6 +100,20 @@ describe("DiscoverPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("says attractions are coming when both lists are empty", () => {
+    renderDiscover({ attractions: [], experiences: [] });
+    expect(
+      screen.getByText("Attractions will be listed here soon."),
+    ).toBeInTheDocument();
+  });
+
+  it("does not show the coming-soon line when something is listed", () => {
+    renderDiscover({ experiences: [] });
+    expect(
+      screen.queryByText("Attractions will be listed here soon."),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the intro line only when there is one", () => {
     const base = discoverProps.intro;
     if (!base) throw new Error("no discover section");

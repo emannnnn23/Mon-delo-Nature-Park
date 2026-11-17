@@ -16,6 +16,33 @@ Everything in [README → Global Constraints](README.md#global-constraints-apply
 - **Public routes never define `HydrateFallback`.** Admin routes may.
 - **Public `clientLoader`s never call `serverLoader()` for their data.** It is used only as the failure fallback inside `loadForClient`.
 
+## Carried from Phase 2 (binding)
+- **Data helpers already in place.** Phase 2 routes have build-time `loader`s that return placeholder data through shared helpers: `chromeData()` in `_public.tsx`, `attractionData()` in `discover.$slug.tsx`, and `selectHomeContent()` in `src/lib/homeContent.ts`.
+  - Swap the placeholders inside these helpers for the Supabase fetchers.
+  - A `clientLoader` must never call the build-stripped `loader`.
+  - `_public` and `discover.$slug` already export `clientLoader` with `hydrate = true`.
+- **Supabase failures must not wipe the page.**
+  - Hydrating `clientLoader`s must catch Supabase failures and fall back to the build-time data.
+  - Add a layout-level `ErrorBoundary` that keeps the header and footer, so a failure never replaces good prerendered content with the bare root error screen.
+- **Keep the database client out of the first page load.**
+  - Load supabase-js with a dynamic `import()` inside `clientLoader`s, so it stays out of the initial public chunks.
+  - Remove `placeholders` from client code paths. It currently ships in `assets/placeholders-*.js`.
+- **Prerender list.** Build it from the database at build time. Handle the case of zero published attractions using the option chosen in the spike notes (ruling R13).
+- **Mapper rules.**
+  - Order every list by `sort_order`.
+  - Convert the `numeric` `google_rating` to a `number`, or `.toFixed` will crash.
+  - Map the `attraction_images` row `id` into `Attraction.images[].id`.
+- **Link preview images.**
+  - `og:image` must be an absolute URL. `publicMediaUrl` returns a relative path when the environment variables are missing.
+  - Fall back to `settings.defaultOgImage`.
+  - Preload the hero image once one exists.
+- **Contact form.**
+  - `contactSchema` counts lengths in UTF-16 code units, but Postgres counts code points. Measure with `[...value].length`.
+  - Wire `onSubmit` into `ContactForm`. Phase 2 passes none, which shows "Online messages open soon".
+  - Move focus to the status line after sending.
+  - Decide what happens when a pasted message is longer than `maxLength`.
+- **Housekeeping.** Correct the "never throws" doc comment on `publicMediaUrl`, and log errors other than 404 in route `ErrorBoundary`s.
+
 ## Review Focus
 1. **The Supabase project is paused or unreachable when a visitor loads the site.** The pre-rendered content stays on screen, and a failed refresh is silent and logged to the console. It must never blank the page. → Task 2 tests it.
 2. **A production build with Supabase unreachable** must fail with a clear message, never ship placeholders. A preview build must succeed with placeholders. → Task 2 tests it.

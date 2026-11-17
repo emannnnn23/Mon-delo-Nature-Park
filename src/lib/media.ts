@@ -16,6 +16,7 @@ export function publicMediaUrl(path: string): string {
  * anything else is a key in the `media` bucket.
  */
 export function mediaVariantUrl(path: string): string {
-  if (path.startsWith("/") || path.startsWith("https://")) return path;
+  // `//host` and `/\host` are protocol-relative, so they are not site paths.
+  if (/^\/[^/\\]/.test(path) || path.startsWith("https://")) return path;
   return publicMediaUrl(path);
 }

@@ -31,6 +31,17 @@ describe("mediaVariantUrl", () => {
     );
   });
 
+  it.each(["//evil.com/x", "/\\evil.com/x", "http://evil.com/x"])(
+    "keeps %s under the media bucket",
+    (path) => {
+      vi.stubEnv("VITE_SUPABASE_URL", "https://x.supabase.co");
+      vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon");
+      expect(mediaVariantUrl(path)).toBe(
+        `https://x.supabase.co/storage/v1/object/public/media/${path}`,
+      );
+    },
+  );
+
   it("passes site-absolute and https paths through unchanged", () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://x.supabase.co");
     vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon");

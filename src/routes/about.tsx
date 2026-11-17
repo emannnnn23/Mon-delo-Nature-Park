@@ -1,5 +1,8 @@
 import { placeholders } from "~/content/placeholders";
 import { buildMeta, SITE_URL } from "~/lib/meta";
+import { AboutPage } from "~/pages/AboutPage";
+
+import type { Route } from "./+types/about";
 
 export function meta() {
   return buildMeta({
@@ -10,14 +13,11 @@ export function meta() {
   });
 }
 
+// Build-time loader (ruling P2-R9). Phase 4 swaps placeholders for Supabase.
 export function loader() {
   return { sections: placeholders.sections.about };
 }
 
-export default function About() {
-  return (
-    <main className="mx-auto max-w-3xl p-8">
-      <h1 className="font-serif text-4xl text-forest-900">About the Park</h1>
-    </main>
-  );
+export default function About({ loaderData }: Route.ComponentProps) {
+  return <AboutPage {...loaderData} />;
 }

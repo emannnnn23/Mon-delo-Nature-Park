@@ -278,7 +278,9 @@ describe("Visit section", () => {
       screen.getByRole("heading", { level: 2, name: "Visit Us" }),
     ).toBeInTheDocument();
     const link = screen.getByRole("link", { name: /get directions/i });
-    expect(link.getAttribute("href")).toContain("destination=M8GV%2B8GP");
+    expect(link.getAttribute("href")).toContain(
+      "destination=M8GV%2B8GP%20Kawayan%2C%20Biliran",
+    );
     expect(link).toHaveAttribute("target", "_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
   });

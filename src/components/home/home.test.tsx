@@ -484,6 +484,17 @@ describe("Visit section", () => {
     expect(count(section()?.textContent ?? "", "Balaring Road")).toBe(1);
   });
 
+  it("stacks the heading over the card when it has nothing beside it", () => {
+    const grid = () =>
+      screen.getByRole("heading", { level: 2, name: "Visit Us" }).parentElement
+        ?.parentElement?.parentElement;
+    const { unmount } = renderHome();
+    expect(grid()?.className).not.toContain("lg:grid-cols");
+    unmount();
+    renderHome({ settings: { ...base.settings, phone: "+63 900 000 0000" } });
+    expect(grid()?.className).toContain("lg:grid-cols");
+  });
+
   it("embeds the map and shows contact details when set", () => {
     renderHome({
       settings: {

@@ -21,12 +21,21 @@ export function VisitSection({ section, settings }: VisitSectionProps) {
   const { addressLine, phone, email, mapsEmbedUrl } = settings;
   const showAddress = Boolean(mapsEmbedUrl);
   const hasDetails = showAddress || Boolean(phone) || Boolean(email);
+  // With only a heading for the left column, stack it over the card rather
+  // than leave a bare heading beside it.
+  const sideBySide = hasDetails || Boolean(section?.body);
   return (
     <section
       aria-labelledby="visit-title"
       className="bg-ivory-50 py-16 md:py-24"
     >
-      <Reveal className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] items-center gap-10 px-5 sm:px-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
+      <Reveal
+        className={`mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] items-center gap-10 px-5 sm:px-8 ${
+          sideBySide
+            ? "lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16"
+            : ""
+        }`}
+      >
         <div className="flex flex-col items-start">
           <SectionHeading
             id="visit-title"

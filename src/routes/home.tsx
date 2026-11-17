@@ -1,10 +1,33 @@
-// Temporary placeholder page; replaced in Phase 2.
-export default function Home() {
-  return (
-    <main className="mx-auto max-w-3xl p-8">
-      <h1 className="font-serif text-4xl text-forest-900">
-        Mondelos Nature Park
-      </h1>
-    </main>
-  );
+import { placeholders } from "~/content/placeholders";
+import { homeMetaDescription, selectHomeContent } from "~/lib/homeContent";
+import { buildMeta, SITE_URL } from "~/lib/meta";
+import { HomePage } from "~/pages/HomePage";
+
+import type { Route } from "./+types/home";
+
+export function meta({ loaderData }: Route.MetaArgs) {
+  return buildMeta({
+    description: homeMetaDescription(loaderData?.sections ?? []),
+    path: "/",
+    siteUrl: SITE_URL,
+  });
+}
+
+// The hero image needs no `links` preload: React hoists one for the
+// fetchpriority="high" <img> in the prerendered HTML, and it follows whichever
+// image the hero shows, so a CMS hero image is never shadowed by a static one.
+
+// Build-time loader (ruling P2-R9). Phase 4 swaps placeholders for Supabase.
+export function loader() {
+  return selectHomeContent({
+    settings: placeholders.settings,
+    sections: placeholders.sections.home,
+    attractions: placeholders.attractions,
+    galleryImages: placeholders.galleryImages,
+    testimonials: placeholders.testimonials,
+  });
+}
+
+export default function Home({ loaderData }: Route.ComponentProps) {
+  return <HomePage {...loaderData} />;
 }

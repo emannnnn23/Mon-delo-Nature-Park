@@ -1,4 +1,5 @@
 import { buildMeta, SITE_URL } from "~/lib/meta";
+import { NotFoundContent } from "~/pages/NotFoundPage";
 
 export function meta() {
   return [
@@ -16,9 +17,5 @@ export function meta() {
 // route, which no pre-render path matches. React Router rejects a `loader` on
 // a route that is never pre-rendered when `ssr: false`.
 export default function NotFound() {
-  return (
-    <main className="mx-auto max-w-3xl p-8">
-      <h1 className="font-serif text-4xl text-forest-900">Page not found</h1>
-    </main>
-  );
+  return <NotFoundContent />;
 }

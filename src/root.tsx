@@ -13,7 +13,7 @@ import "@fontsource/playfair-display/latin-400.css";
 import "@fontsource/playfair-display/latin-400-italic.css";
 import "@fontsource/playfair-display/latin-600.css";
 import "@fontsource/playfair-display/latin-700.css";
-import playfair600Latin from "@fontsource/playfair-display/files/playfair-display-latin-600-normal.woff2?url";
+import playfair700Latin from "@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff2?url";
 
 import { Logo } from "./components/common/Logo";
 import { ErrorContent } from "./pages/ErrorPage";
@@ -21,10 +21,14 @@ import { NotFoundContent } from "./pages/NotFoundPage";
 import type { Route } from "./+types/root";
 import "./app.css";
 
+/**
+ * Preload only the face the hero heading paints with: Playfair 700 (the
+ * heading is `font-bold`). The 600 face, used by the logo, loads on demand.
+ */
 export const links: Route.LinksFunction = () => [
   {
     rel: "preload",
-    href: playfair600Latin,
+    href: playfair700Latin,
     as: "font",
     type: "font/woff2",
     crossOrigin: "anonymous",

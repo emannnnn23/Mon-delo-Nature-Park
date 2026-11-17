@@ -180,6 +180,15 @@ describe("Hero", () => {
     expect(hero.querySelectorAll("p")).toHaveLength(0);
   });
 
+  it("keeps the heading out of the opacity fade so it can be the LCP element", () => {
+    renderHome();
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1).not.toHaveClass("motion-safe:animate-rise");
+    expect(h1).toHaveClass("motion-safe:animate-rise-up");
+    // The preloaded Playfair face (700) must match this weight.
+    expect(h1).toHaveClass("font-bold");
+  });
+
   it("shows the hero body when present", () => {
     renderHome({
       sections: base.sections.map((s) =>
@@ -328,6 +337,22 @@ describe("Gallery and testimonials band", () => {
     expect(
       screen.queryByRole("link", { name: /read reviews on google/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("omits the reviews column and widens the gallery with nothing to show", () => {
+    renderHome({
+      testimonials: [],
+      settings: {
+        ...base.settings,
+        googleRating: null,
+        googleReviewCount: null,
+        mapsListingUrl: null,
+      },
+    });
+    expect(screen.queryByText("What Our Guests Say")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Our Gallery" }),
+    ).toBeInTheDocument();
   });
 
   it("shows a whole-number rating with one decimal", () => {

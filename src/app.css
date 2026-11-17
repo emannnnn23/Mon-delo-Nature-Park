@@ -50,6 +50,18 @@
     }
   }
 
+  /* Transform-only entrance: no opacity, so the element can be the LCP. */
+  --animate-rise-up: rise-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise-up {
+    from {
+      transform: translateY(18px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
   --animate-scroll-cue: scroll-cue 1.8s ease-in-out infinite;
 
   @keyframes scroll-cue {

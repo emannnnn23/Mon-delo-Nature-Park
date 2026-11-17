@@ -125,6 +125,10 @@ export function GalleryTestimonialsBand({
   settings,
 }: GalleryTestimonialsBandProps) {
   const { googleRating, googleReviewCount, mapsListingUrl } = settings;
+  // Without a rating, a quote or a listing to link, the reviews column would
+  // be a lone heading: drop it and let the gallery span the band.
+  const hasReviews =
+    googleRating !== null || testimonials.length > 0 || Boolean(mapsListingUrl);
 
   return (
     <div
@@ -134,10 +138,18 @@ export function GalleryTestimonialsBand({
       <LeafDecor position="left" surface="dark" className="-z-10" />
       <LeafDecor position="right" surface="dark" className="-z-10" />
 
-      <Reveal className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-14 px-5 sm:px-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-0">
+      <Reveal
+        className={`mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-14 px-5 sm:px-8 ${
+          hasReviews
+            ? "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-0"
+            : ""
+        }`}
+      >
         <section
           aria-labelledby="gallery-title"
-          className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 lg:pr-12 xl:grid-cols-[13rem_minmax(0,1fr)] xl:gap-10"
+          className={`grid grid-cols-[minmax(0,1fr)] items-center gap-8 xl:grid-cols-[13rem_minmax(0,1fr)] xl:gap-10 ${
+            hasReviews ? "lg:pr-12" : ""
+          }`}
         >
           <div className="flex flex-col items-start">
             <div className="flex w-full items-center gap-4">
@@ -169,37 +181,39 @@ export function GalleryTestimonialsBand({
           <Mosaic images={galleryImages} />
         </section>
 
-        <section
-          aria-labelledby="reviews-title"
-          className="flex flex-col items-center justify-center gap-5 border-t border-ivory-50/15 pt-12 text-center lg:border-t-0 lg:border-l lg:border-gold-500/35 lg:pt-0 lg:pl-12"
-        >
-          <h2
-            id="reviews-title"
-            className="font-serif text-3xl leading-tight font-bold md:text-[2rem]"
+        {hasReviews ? (
+          <section
+            aria-labelledby="reviews-title"
+            className="flex flex-col items-center justify-center gap-5 border-t border-ivory-50/15 pt-12 text-center lg:border-t-0 lg:border-l lg:border-gold-500/35 lg:pt-0 lg:pl-12"
           >
-            {testimonialsSection?.heading ?? "What Our Guests Say"}
-          </h2>
-          {googleRating !== null ? (
-            <GoogleRating
-              rating={googleRating}
-              reviewCount={googleReviewCount}
-            />
-          ) : null}
-          {testimonials.length > 0 ? (
-            <TestimonialSlider testimonials={testimonials} />
-          ) : mapsListingUrl ? (
-            <Button
-              href={mapsListingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="outline-light"
-              icon={ArrowUpRight}
-              className="mt-1"
+            <h2
+              id="reviews-title"
+              className="font-serif text-3xl leading-tight font-bold md:text-[2rem]"
             >
-              Read reviews on Google
-            </Button>
-          ) : null}
-        </section>
+              {testimonialsSection?.heading ?? "What Our Guests Say"}
+            </h2>
+            {googleRating !== null ? (
+              <GoogleRating
+                rating={googleRating}
+                reviewCount={googleReviewCount}
+              />
+            ) : null}
+            {testimonials.length > 0 ? (
+              <TestimonialSlider testimonials={testimonials} />
+            ) : mapsListingUrl ? (
+              <Button
+                href={mapsListingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="outline-light"
+                icon={ArrowUpRight}
+                className="mt-1"
+              >
+                Read reviews on Google
+              </Button>
+            ) : null}
+          </section>
+        ) : null}
       </Reveal>
     </div>
   );

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { createRoutesStub } from "react-router";
 
-import { ErrorBoundary } from "./root";
+import { ErrorBoundary, links } from "./root";
 
 function renderBoundary(error: unknown) {
   const Stub = createRoutesStub([
@@ -51,5 +51,15 @@ describe("root ErrorBoundary", () => {
       "href",
       "/",
     );
+  });
+});
+
+describe("root links", () => {
+  it("preloads the Playfair weight the hero heading uses (bold, 700)", () => {
+    const preloads = (links() as { rel: string; href: string }[]).filter(
+      (link) => link.rel === "preload",
+    );
+    expect(preloads).toHaveLength(1);
+    expect(preloads[0].href).toContain("playfair-display-latin-700-normal");
   });
 });

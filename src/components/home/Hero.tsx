@@ -17,12 +17,18 @@ function splitHeading(heading: string): [string, string | null] {
 }
 
 /** Staggered entrance; CSS drops it entirely under reduced motion. */
-function rise(delayMs: number): {
+function rise(
+  delayMs: number,
+  /** Slide only, without the opacity fade, for the LCP heading. */
+  slideOnly = false,
+): {
   className: string;
   style: CSSProperties;
 } {
   return {
-    className: "motion-safe:animate-rise",
+    className: slideOnly
+      ? "motion-safe:animate-rise-up"
+      : "motion-safe:animate-rise",
     style: { animationDelay: `${delayMs}ms` },
   };
 }
@@ -82,8 +88,8 @@ export function Hero({ section }: HeroProps) {
 
           <h1
             id="hero-title"
-            className={`mt-6 font-serif text-[clamp(2.5rem,1.4rem+4.6vw,5.5rem)] leading-[1.03] font-bold tracking-[-0.01em] text-balance text-ivory-50 [text-shadow:0_2px_28px_rgb(15_42_33/0.35)] ${rise(90).className}`}
-            style={rise(90).style}
+            className={`mt-6 font-serif text-[clamp(2.5rem,1.4rem+4.6vw,5.5rem)] leading-[1.03] font-bold tracking-[-0.01em] text-balance text-ivory-50 [text-shadow:0_2px_28px_rgb(15_42_33/0.35)] ${rise(90, true).className}`}
+            style={rise(90, true).style}
           >
             {accent ? (
               <>

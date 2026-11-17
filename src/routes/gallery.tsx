@@ -1,5 +1,9 @@
 import { placeholders } from "~/content/placeholders";
+import { findSection } from "~/lib/homeContent";
 import { buildMeta, SITE_URL } from "~/lib/meta";
+import { GalleryPage } from "~/pages/GalleryPage";
+
+import type { Route } from "./+types/gallery";
 
 export function meta() {
   return buildMeta({
@@ -10,17 +14,15 @@ export function meta() {
   });
 }
 
+// Build-time loader (ruling P2-R9). Phase 4 swaps placeholders for Supabase.
 export function loader() {
   return {
+    intro: findSection(placeholders.sections.home, "gallery"),
     categories: placeholders.galleryCategories,
     images: placeholders.galleryImages,
   };
 }
 
-export default function Gallery() {
-  return (
-    <main className="mx-auto max-w-3xl p-8">
-      <h1 className="font-serif text-4xl text-forest-900">Gallery</h1>
-    </main>
-  );
+export default function Gallery({ loaderData }: Route.ComponentProps) {
+  return <GalleryPage {...loaderData} />;
 }

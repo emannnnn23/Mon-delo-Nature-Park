@@ -1,5 +1,7 @@
 import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
 import { Button } from "../components/common/Button";
+import { Lightbox } from "../components/common/Lightbox";
 import { ResponsiveImage } from "../components/common/ResponsiveImage";
 import { SampleTag } from "../components/common/SampleTag";
 import { HeroIllustration } from "../components/home/HeroIllustration";
@@ -16,6 +18,7 @@ export type AttractionPageProps = { attraction: Attraction };
 export function AttractionPage({ attraction }: AttractionPageProps) {
   const paragraphs = splitParagraphs(attraction.description);
   const { images } = attraction;
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <>
@@ -76,15 +79,24 @@ export function AttractionPage({ attraction }: AttractionPageProps) {
                 aria-label="More photos"
                 className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
               >
-                {images.map(({ image, caption }) => (
+                {images.map(({ image, caption }, index) => (
                   <li key={image.id}>
                     <figure>
-                      <div className="aspect-[4/3] overflow-hidden rounded-lg ring-1 ring-earth-700/10">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          // Safari does not focus a button on click; do it so
+                          // focus can return here when the viewer closes.
+                          event.currentTarget.focus();
+                          setOpenIndex(index);
+                        }}
+                        className="block aspect-[4/3] w-full cursor-zoom-in overflow-hidden rounded-lg ring-1 ring-earth-700/10"
+                      >
                         <ResponsiveImage
                           asset={image}
                           sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                         />
-                      </div>
+                      </button>
                       {caption ? (
                         <figcaption className="mt-2 text-sm leading-relaxed text-ink-600">
                           {caption}
@@ -96,6 +108,12 @@ export function AttractionPage({ attraction }: AttractionPageProps) {
               </ul>
             </section>
           ) : null}
+          <Lightbox
+            items={images}
+            index={openIndex}
+            onClose={() => setOpenIndex(null)}
+            onIndexChange={setOpenIndex}
+          />
 
           <div
             className={

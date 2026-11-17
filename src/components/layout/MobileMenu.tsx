@@ -1,6 +1,7 @@
 import { ArrowRight, X } from "lucide-react";
 import { useEffect, useRef, type RefObject } from "react";
 import { NavLink } from "react-router";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 import { Button } from "../common/Button";
 import { Logo } from "../common/Logo";
 import { NAV_LINKS } from "./navLinks";
@@ -11,7 +12,6 @@ type MobileMenuProps = {
   returnFocusRef: RefObject<HTMLElement | null>;
 };
 
-const FOCUSABLE = "a[href], button:not([disabled])";
 const DESKTOP = "(min-width: 1024px)";
 
 /**
@@ -27,39 +27,12 @@ export function MobileMenu({ onClose, returnFocusRef }: MobileMenuProps) {
     onCloseRef.current = onClose;
   }, [onClose]);
 
+  useFocusTrap(panelRef, true, onClose, {
+    initialFocusRef: closeRef,
+    returnFocusRef,
+  });
+
   useEffect(() => {
-    const returnTo = returnFocusRef.current;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const panel = panelRef.current;
-      if (!panel) return;
-      const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-      if (!active || !panel.contains(active)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
-      } else if (event.shiftKey && active === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-
     // The panel is hidden at lg and up, so release the scroll lock if the
     // viewport grows while it is open.
     let mql: MediaQueryList | undefined;
@@ -72,12 +45,9 @@ export function MobileMenu({ onClose, returnFocusRef }: MobileMenuProps) {
     }
 
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
       mql?.removeEventListener("change", onResize);
-      document.body.style.overflow = previousOverflow;
-      returnTo?.focus();
     };
-  }, [returnFocusRef]);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">

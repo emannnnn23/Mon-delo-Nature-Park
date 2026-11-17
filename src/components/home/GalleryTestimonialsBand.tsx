@@ -1,6 +1,8 @@
 import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { useState } from "react";
 import { Button } from "../common/Button";
 import { LeafDecor } from "../common/LeafDecor";
+import { Lightbox } from "../common/Lightbox";
 import { PlaceholderImage } from "../common/PlaceholderImage";
 import { ResponsiveImage } from "../common/ResponsiveImage";
 import type {
@@ -35,6 +37,8 @@ const MOSAIC_GRID =
   "grid grid-cols-2 gap-2.5 sm:gap-3 lg:h-72 lg:grid-cols-[1.45fr_1fr_1.15fr] lg:grid-rows-2 lg:[grid-template-areas:'a_b_c'_'a_d_e']";
 
 function Mosaic({ images }: { images: GalleryImage[] }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
   if (images.length === 0) {
     // No photos yet: five quiet tiles, announced once as a single image.
     return (
@@ -62,25 +66,44 @@ function Mosaic({ images }: { images: GalleryImage[] }) {
 
   const full = images.length >= MOSAIC_AREAS.length;
   return (
-    <ul className={full ? MOSAIC_GRID : "grid grid-cols-2 gap-3"}>
-      {images.slice(0, MOSAIC_AREAS.length).map((item, i) => (
-        <li
-          key={item.id}
-          className={`overflow-hidden rounded-md ${
-            full ? AREA_CLASS[MOSAIC_AREAS[i]] : "aspect-[4/3]"
-          }`}
-        >
-          <ResponsiveImage
-            asset={item.image}
-            sizes={
-              i === 0
-                ? "(min-width: 1024px) 300px, 100vw"
-                : "(min-width: 1024px) 200px, 50vw"
-            }
-          />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className={full ? MOSAIC_GRID : "grid grid-cols-2 gap-3"}>
+        {images.slice(0, MOSAIC_AREAS.length).map((item, i) => (
+          <li
+            key={item.id}
+            className={`overflow-hidden rounded-md ${
+              full ? AREA_CLASS[MOSAIC_AREAS[i]] : "aspect-[4/3]"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={(event) => {
+                // Safari does not focus a button on click; do it so focus
+                // can return here when the viewer closes.
+                event.currentTarget.focus();
+                setOpenIndex(i);
+              }}
+              className="block h-full w-full cursor-zoom-in"
+            >
+              <ResponsiveImage
+                asset={item.image}
+                sizes={
+                  i === 0
+                    ? "(min-width: 1024px) 300px, 100vw"
+                    : "(min-width: 1024px) 200px, 50vw"
+                }
+              />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <Lightbox
+        items={images}
+        index={openIndex}
+        onClose={() => setOpenIndex(null)}
+        onIndexChange={setOpenIndex}
+      />
+    </>
   );
 }
 

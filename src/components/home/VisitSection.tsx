@@ -1,6 +1,7 @@
 import { Mail, MapPin, Phone } from "lucide-react";
 import { DirectionsButton, MapsCard } from "../common/MapsCard";
 import { MapEmbed } from "../common/MapEmbed";
+import { Reveal } from "../common/Reveal";
 import { SectionHeading } from "../common/SectionHeading";
 import type { PageSection, SiteSettings } from "../../types/content";
 
@@ -25,7 +26,7 @@ export function VisitSection({ section, settings }: VisitSectionProps) {
       aria-labelledby="visit-title"
       className="bg-ivory-50 py-16 md:py-24"
     >
-      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] items-center gap-10 px-5 sm:px-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
+      <Reveal className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] items-center gap-10 px-5 sm:px-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
         <div className="flex flex-col items-start">
           <SectionHeading
             id="visit-title"
@@ -82,7 +83,7 @@ export function VisitSection({ section, settings }: VisitSectionProps) {
         ) : (
           <MapsCard settings={settings} />
         )}
-      </div>
+      </Reveal>
     </section>
   );
 }

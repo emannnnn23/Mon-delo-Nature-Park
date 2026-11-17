@@ -76,6 +76,59 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("section reveal", () => {
+  function stubObserverBelowFold() {
+    class FakeObserver {
+      observe = vi.fn();
+      disconnect = vi.fn();
+      unobserve = vi.fn();
+    }
+    vi.stubGlobal("IntersectionObserver", FakeObserver);
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 5000,
+      bottom: 5200,
+      left: 0,
+      right: 300,
+      width: 300,
+      height: 200,
+      x: 0,
+      y: 5000,
+      toJSON: () => ({}),
+    });
+  }
+
+  const below = [
+    "Mondelos Nature Park",
+    "Discover the Park",
+    "Our Gallery",
+    "What Our Guests Say",
+    "Visit Us",
+  ];
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("fades in every section below the hero, never the hero itself", () => {
+    mockReducedMotion(false);
+    stubObserverBelowFold();
+    renderHome();
+    for (const name of below) {
+      const heading = screen.getByRole("heading", { level: 2, name });
+      expect(heading.closest(".opacity-0")).not.toBeNull();
+    }
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1.closest(".opacity-0")).toBeNull();
+  });
+
+  it("does not hide anything under reduced motion", () => {
+    mockReducedMotion(true);
+    stubObserverBelowFold();
+    const { container } = renderHome();
+    expect(container.querySelector(".opacity-0")).toBeNull();
+  });
+});
+
 describe("Hero", () => {
   it("renders the heading with 'in Nature.' in the gold span", () => {
     renderHome();

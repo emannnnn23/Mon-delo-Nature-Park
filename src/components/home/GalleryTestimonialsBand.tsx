@@ -5,6 +5,7 @@ import { LeafDecor } from "../common/LeafDecor";
 import { Lightbox } from "../common/Lightbox";
 import { PlaceholderImage } from "../common/PlaceholderImage";
 import { ResponsiveImage } from "../common/ResponsiveImage";
+import { Reveal } from "../common/Reveal";
 import { SampleTag } from "../common/SampleTag";
 import type {
   GalleryImage,
@@ -133,7 +134,7 @@ export function GalleryTestimonialsBand({
       <LeafDecor position="left" surface="dark" className="-z-10" />
       <LeafDecor position="right" surface="dark" className="-z-10" />
 
-      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-14 px-5 sm:px-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-0">
+      <Reveal className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-14 px-5 sm:px-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-0">
         <section
           aria-labelledby="gallery-title"
           className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 lg:pr-12 xl:grid-cols-[13rem_minmax(0,1fr)] xl:gap-10"
@@ -199,7 +200,7 @@ export function GalleryTestimonialsBand({
             </Button>
           ) : null}
         </section>
-      </div>
+      </Reveal>
     </div>
   );
 }

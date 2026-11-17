@@ -4,6 +4,7 @@ import {
   AttractionCard,
   type AttractionCardVariant,
 } from "../attractions/AttractionCard";
+import { Reveal } from "../common/Reveal";
 import { SectionHeading } from "../common/SectionHeading";
 import type { Attraction, PageSection } from "../../types/content";
 
@@ -78,7 +79,7 @@ export function DiscoverPreview({
       aria-labelledby="discover-title"
       className="bg-cream-100/55 py-16 md:py-24"
     >
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <Reveal className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
           <SectionHeading
             id="discover-title"
@@ -108,7 +109,7 @@ export function DiscoverPreview({
             </li>
           ))}
         </ul>
-      </div>
+      </Reveal>
     </section>
   );
 }

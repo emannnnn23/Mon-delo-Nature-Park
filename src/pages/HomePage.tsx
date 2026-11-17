@@ -1,4 +1,5 @@
 import { LeafDecor } from "../components/common/LeafDecor";
+import { Reveal } from "../components/common/Reveal";
 import { DiscoverPreview } from "../components/home/DiscoverPreview";
 import { ExperienceCards } from "../components/home/ExperienceCards";
 import { GalleryTestimonialsBand } from "../components/home/GalleryTestimonialsBand";
@@ -26,7 +27,7 @@ export function HomePage({
       <div className="relative isolate overflow-hidden bg-ivory-50 py-16 md:py-24">
         <LeafDecor position="left" className="-z-10" />
         <LeafDecor position="right" className="-z-10" />
-        <div
+        <Reveal
           className={`mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-12 px-5 sm:px-8 ${
             hasExperiences
               ? "xl:grid-cols-[17rem_minmax(0,1fr)] xl:items-center xl:gap-14"
@@ -38,7 +39,7 @@ export function HomePage({
             parkName={settings.parkName}
           />
           <ExperienceCards experiences={experiences} />
-        </div>
+        </Reveal>
       </div>
 
       <DiscoverPreview

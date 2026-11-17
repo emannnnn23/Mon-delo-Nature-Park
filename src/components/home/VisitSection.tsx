@@ -12,9 +12,14 @@ type VisitSectionProps = {
 const contactClass =
   "inline-flex min-h-11 items-center gap-3 text-ink-900 underline decoration-gold-500/0 decoration-2 underline-offset-4 transition-colors hover:decoration-gold-500";
 
-/** Address, contact details and either the map or a Google Maps card. */
+/**
+ * Contact details beside either the map or a Google Maps card. The address
+ * shows once: in the card when there is one, otherwise beside the map.
+ */
 export function VisitSection({ section, settings }: VisitSectionProps) {
   const { addressLine, phone, email, mapsEmbedUrl } = settings;
+  const showAddress = Boolean(mapsEmbedUrl);
+  const hasDetails = showAddress || Boolean(phone) || Boolean(email);
   return (
     <section
       aria-labelledby="visit-title"
@@ -27,36 +32,40 @@ export function VisitSection({ section, settings }: VisitSectionProps) {
             title={section?.heading ?? "Visit Us"}
             subtitle={section?.body}
           />
-          <address className="mt-6 flex flex-col gap-1 not-italic">
-            <p className="flex items-start gap-3 py-2.5 text-ink-900">
-              <MapPin
-                aria-hidden="true"
-                className="mt-0.5 size-5 shrink-0 text-earth-700"
-              />
-              <span>{addressLine}</span>
-            </p>
-            {phone ? (
-              <a
-                href={`tel:${phone.replace(/[^\d+]/g, "")}`}
-                className={contactClass}
-              >
-                <Phone
-                  aria-hidden="true"
-                  className="size-5 shrink-0 text-earth-700"
-                />
-                {phone}
-              </a>
-            ) : null}
-            {email ? (
-              <a href={`mailto:${email}`} className={contactClass}>
-                <Mail
-                  aria-hidden="true"
-                  className="size-5 shrink-0 text-earth-700"
-                />
-                {email}
-              </a>
-            ) : null}
-          </address>
+          {hasDetails ? (
+            <address className="mt-6 flex flex-col gap-1 not-italic">
+              {showAddress ? (
+                <p className="flex items-start gap-3 py-2.5 text-ink-900">
+                  <MapPin
+                    aria-hidden="true"
+                    className="mt-0.5 size-5 shrink-0 text-earth-700"
+                  />
+                  <span>{addressLine}</span>
+                </p>
+              ) : null}
+              {phone ? (
+                <a
+                  href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+                  className={contactClass}
+                >
+                  <Phone
+                    aria-hidden="true"
+                    className="size-5 shrink-0 text-earth-700"
+                  />
+                  {phone}
+                </a>
+              ) : null}
+              {email ? (
+                <a href={`mailto:${email}`} className={contactClass}>
+                  <Mail
+                    aria-hidden="true"
+                    className="size-5 shrink-0 text-earth-700"
+                  />
+                  {email}
+                </a>
+              ) : null}
+            </address>
+          ) : null}
           {mapsEmbedUrl ? (
             <div className="mt-8">
               <DirectionsButton settings={settings} />

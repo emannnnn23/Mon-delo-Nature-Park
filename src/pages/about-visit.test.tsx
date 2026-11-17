@@ -126,9 +126,58 @@ describe("VisitPage", () => {
     ).toBeInTheDocument();
     expect(container.querySelector("main")).toBeNull();
     expect(
-      screen.getAllByText(placeholders.settings.addressLine).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText("M8GV+8GP").length).toBeGreaterThan(0);
+      screen.getByText("Balaring Road, Kawayan, Biliran, Philippines"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("M8GV+8GP")).toBeInTheDocument();
+  });
+
+  const count = (text: string | null, needle: string) =>
+    (text ?? "").split(needle).length - 1;
+
+  it("shows the plus code and street address once, in the Google Maps card", () => {
+    const { container } = renderVisit();
+    expect(count(container.textContent, "M8GV+8GP")).toBe(1);
+    expect(count(container.textContent, "Balaring Road")).toBe(1);
+    // With nothing else to list, there is no separate address section.
+    expect(
+      screen.queryByRole("heading", { name: /address and contact/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lists phone and email under Contact when the card holds the address", () => {
+    renderVisit({
+      settings: { ...placeholders.settings, phone: "+63 900 000 0000" },
+    });
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Contact" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the address once beside an embedded map", () => {
+    const { container } = renderVisit({
+      settings: {
+        ...placeholders.settings,
+        mapsEmbedUrl: "https://www.google.com/maps/embed?pb=1",
+      },
+    });
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Address and contact" }),
+    ).toBeInTheDocument();
+    expect(count(container.textContent, "M8GV+8GP")).toBe(1);
+    expect(count(container.textContent, "Balaring Road")).toBe(1);
+  });
+
+  it("puts the contact form on a cream band when there is no FAQ band", () => {
+    const contact = () =>
+      screen
+        .getByRole("heading", { level: 2, name: "Send Us a Message" })
+        .closest("section");
+    const { unmount } = renderVisit({ faqs: [] });
+    expect(contact()?.className).toContain("bg-cream-100");
+    unmount();
+    renderVisit({ faqs: [faq(1)] });
+    expect(contact()?.className).toContain("bg-ivory-50");
+    expect(contact()?.className).not.toContain("bg-cream-100");
   });
 
   it("links Get Directions by plus code", () => {

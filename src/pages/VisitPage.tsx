@@ -68,6 +68,12 @@ export function VisitPage({
   const textSections = ["intro", "getting_here"]
     .map((key) => sections.find((s) => s.key === key))
     .filter((s): s is PageSection => s !== undefined);
+  // Without an embed URL the Google Maps card shows the plus code and
+  // address, so they are not repeated here.
+  const showAddress = Boolean(mapsEmbedUrl);
+  const hasContact = Boolean(phone) || Boolean(email) || Boolean(openingHours);
+  const showPlusCode = plusCode !== null && !addressLine.includes(plusCode);
+  const hasFaqs = faqs.length > 0;
 
   return (
     <>
@@ -80,78 +86,84 @@ export function VisitPage({
               <TextSection key={section.key} section={section} />
             ))}
 
-            <section
-              aria-labelledby="visit-address"
-              className="flex flex-col items-start gap-4"
-            >
-              <h2
-                id="visit-address"
-                className="font-serif text-3xl leading-tight font-bold text-forest-900 md:text-4xl"
+            {showAddress || hasContact ? (
+              <section
+                aria-labelledby="visit-address"
+                className="flex flex-col items-start gap-4"
               >
-                Address and contact
-              </h2>
-              <address className="flex flex-col gap-1 not-italic">
-                <p className="flex items-start gap-3 py-2.5 text-ink-900">
-                  <MapPin
-                    aria-hidden="true"
-                    className="mt-0.5 size-5 shrink-0 text-earth-700"
-                  />
-                  <span>
-                    <span>{addressLine}</span>
-                    {plusCode ? (
-                      <span className="mt-1 block text-sm text-ink-600">
-                        Plus code{" "}
-                        <span className="font-medium">{plusCode}</span>
-                      </span>
+                <h2
+                  id="visit-address"
+                  className="font-serif text-3xl leading-tight font-bold text-forest-900 md:text-4xl"
+                >
+                  {showAddress ? "Address and contact" : "Contact"}
+                </h2>
+                {showAddress || phone || email ? (
+                  <address className="flex flex-col gap-1 not-italic">
+                    {showAddress ? (
+                      <p className="flex items-start gap-3 py-2.5 text-ink-900">
+                        <MapPin
+                          aria-hidden="true"
+                          className="mt-0.5 size-5 shrink-0 text-earth-700"
+                        />
+                        <span>
+                          <span>{addressLine}</span>
+                          {showPlusCode ? (
+                            <span className="mt-1 block text-sm text-ink-600">
+                              Plus code{" "}
+                              <span className="font-medium">{plusCode}</span>
+                            </span>
+                          ) : null}
+                        </span>
+                      </p>
                     ) : null}
-                  </span>
-                </p>
-                {phone ? (
-                  <a
-                    href={`tel:${phone.replace(/[^\d+]/g, "")}`}
-                    className={contactClass}
-                  >
-                    <Phone
-                      aria-hidden="true"
-                      className="size-5 shrink-0 text-earth-700"
-                    />
-                    {phone}
-                  </a>
+                    {phone ? (
+                      <a
+                        href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+                        className={contactClass}
+                      >
+                        <Phone
+                          aria-hidden="true"
+                          className="size-5 shrink-0 text-earth-700"
+                        />
+                        {phone}
+                      </a>
+                    ) : null}
+                    {email ? (
+                      <a href={`mailto:${email}`} className={contactClass}>
+                        <Mail
+                          aria-hidden="true"
+                          className="size-5 shrink-0 text-earth-700"
+                        />
+                        {email}
+                      </a>
+                    ) : null}
+                  </address>
                 ) : null}
-                {email ? (
-                  <a href={`mailto:${email}`} className={contactClass}>
-                    <Mail
-                      aria-hidden="true"
-                      className="size-5 shrink-0 text-earth-700"
-                    />
-                    {email}
-                  </a>
-                ) : null}
-              </address>
 
-              {openingHours ? (
-                <div className="flex items-start gap-3">
-                  <Clock
-                    aria-hidden="true"
-                    className="mt-1 size-5 shrink-0 text-earth-700"
-                  />
-                  <div>
-                    <h3 className="font-serif text-xl font-semibold text-forest-900">
-                      Opening hours
-                    </h3>
-                    <p className="mt-1 whitespace-pre-line text-ink-900">
-                      {openingHours}
-                    </p>
+                {openingHours ? (
+                  <div className="flex items-start gap-3">
+                    <Clock
+                      aria-hidden="true"
+                      className="mt-1 size-5 shrink-0 text-earth-700"
+                    />
+                    <div>
+                      <h3 className="font-serif text-xl font-semibold text-forest-900">
+                        Opening hours
+                      </h3>
+                      <p className="mt-1 whitespace-pre-line text-ink-900">
+                        {openingHours}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
 
-              {mapsEmbedUrl ? (
-                <div className="mt-2">
-                  <DirectionsButton settings={settings} />
-                </div>
-              ) : null}
-            </section>
+                {mapsEmbedUrl ? (
+                  <div className="mt-2">
+                    <DirectionsButton settings={settings} />
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
           </div>
 
           <div className="lg:sticky lg:top-28 lg:self-start">
@@ -168,7 +180,7 @@ export function VisitPage({
         </div>
       </div>
 
-      {faqs.length > 0 ? (
+      {hasFaqs ? (
         <section
           aria-labelledby="visit-faq"
           className="bg-cream-100/55 py-14 md:py-20"
@@ -197,13 +209,18 @@ export function VisitPage({
         </section>
       ) : null}
 
+      {/* Bands alternate: cream after the ivory block when there is no FAQ band. */}
       <section
         aria-labelledby="visit-contact"
-        className="bg-ivory-50 py-14 md:py-20"
+        className={`${hasFaqs ? "bg-ivory-50" : "bg-cream-100/55"} py-14 md:py-20`}
       >
         <div className="mx-auto max-w-3xl px-5 sm:px-8">
           <SectionHeading id="visit-contact" title="Send Us a Message" />
-          <div className="mt-8 rounded-2xl bg-cream-100/55 p-6 ring-1 ring-earth-600/15 sm:p-8">
+          <div
+            className={`mt-8 rounded-2xl p-6 ring-1 ring-earth-600/15 sm:p-8 ${
+              hasFaqs ? "bg-cream-100/55" : "bg-ivory-50"
+            }`}
+          >
             <ContactForm onSubmit={onSubmit} />
           </div>
         </div>

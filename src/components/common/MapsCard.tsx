@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 
-import { directionsUrl } from "../../lib/directions";
+import { addressWithoutPlusCode, directionsUrl } from "../../lib/directions";
 import type { SiteSettings } from "../../types/content";
 import { Button } from "./Button";
 
@@ -29,6 +29,11 @@ export function MapsCard({
   settings: SiteSettings;
   headingLevel?: "h2" | "h3";
 }) {
+  // The plus code has its own line, so it is not repeated in the address.
+  const street = addressWithoutPlusCode(
+    settings.addressLine,
+    settings.plusCode,
+  );
   return (
     <div
       data-surface="dark"
@@ -80,9 +85,11 @@ export function MapsCard({
           </span>
         </p>
       ) : null}
-      <p className="mt-2 max-w-sm leading-relaxed text-ivory-50/85">
-        {settings.addressLine}
-      </p>
+      {street ? (
+        <p className="mt-2 max-w-sm leading-relaxed text-ivory-50/85">
+          {street}
+        </p>
+      ) : null}
       <div className="mt-6">
         <DirectionsButton settings={settings} />
       </div>

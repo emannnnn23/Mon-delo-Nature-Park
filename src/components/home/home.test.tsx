@@ -408,6 +408,29 @@ describe("Visit section", () => {
     expect(document.querySelector("iframe")).toBeNull();
   });
 
+  it("shows the plus code and street address once in the section", () => {
+    const count = (text: string | null, needle: string) =>
+      (text ?? "").split(needle).length - 1;
+    const section = () =>
+      screen
+        .getByRole("heading", { level: 2, name: "Visit Us" })
+        .closest("section");
+
+    const { unmount } = renderHome();
+    expect(count(section()?.textContent ?? "", "M8GV+8GP")).toBe(1);
+    expect(count(section()?.textContent ?? "", "Balaring Road")).toBe(1);
+    unmount();
+
+    renderHome({
+      settings: {
+        ...base.settings,
+        mapsEmbedUrl: "https://www.google.com/maps/embed?pb=1",
+      },
+    });
+    expect(count(section()?.textContent ?? "", "M8GV+8GP")).toBe(1);
+    expect(count(section()?.textContent ?? "", "Balaring Road")).toBe(1);
+  });
+
   it("embeds the map and shows contact details when set", () => {
     renderHome({
       settings: {

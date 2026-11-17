@@ -25,6 +25,33 @@
       transform: translateX(0);
     }
   }
+
+  --animate-rise: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  --animate-scroll-cue: scroll-cue 1.8s ease-in-out infinite;
+
+  @keyframes scroll-cue {
+    0%,
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    60% {
+      opacity: 0;
+      transform: translateY(7px);
+    }
+  }
 }
 
 @layer base {

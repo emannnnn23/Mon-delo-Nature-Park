@@ -2,6 +2,8 @@ import { Eyebrow, type Tone } from "./Eyebrow";
 
 type SectionHeadingProps = {
   as?: "h1" | "h2" | "h3";
+  /** Id for the heading element, e.g. for a section's aria-labelledby. */
+  id?: string;
   eyebrow?: string | null;
   title: string;
   subtitle?: string | null;
@@ -13,6 +15,7 @@ type SectionHeadingProps = {
 
 export function SectionHeading({
   as: Heading = "h2",
+  id,
   eyebrow,
   title,
   subtitle,
@@ -31,6 +34,7 @@ export function SectionHeading({
         </Eyebrow>
       ) : null}
       <Heading
+        id={id}
         className={`font-serif text-3xl leading-tight font-bold text-balance md:text-4xl ${
           isLight ? "text-ivory-50" : "text-forest-900"
         }`}

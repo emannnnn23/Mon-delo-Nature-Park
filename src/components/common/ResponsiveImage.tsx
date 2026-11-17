@@ -1,4 +1,4 @@
-import { publicMediaUrl } from "../../lib/supabase";
+import { publicMediaUrl } from "../../lib/media";
 import type { MediaAsset } from "../../types/content";
 import { buildSrcSet, pickFallbackSrc } from "../../utils/imageVariants";
 import { PlaceholderImage } from "./PlaceholderImage";

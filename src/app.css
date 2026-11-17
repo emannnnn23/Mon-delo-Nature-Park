@@ -14,6 +14,17 @@
   --color-ink-900: #262923;
   --color-ink-600: #66675f;
   --color-ink-500: #77786f;
+
+  --animate-menu-in: menu-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+
+  @keyframes menu-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
 }
 
 @layer base {

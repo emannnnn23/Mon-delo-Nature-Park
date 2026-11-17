@@ -46,7 +46,7 @@ export function Logo({ tone = "dark", className = "" }: LogoProps) {
           MONDELOS
         </span>
         <span
-          className={`mt-1.5 font-sans text-[0.625rem] font-medium tracking-[0.36em] ${
+          className={`mt-1.5 font-sans text-[0.6875rem] font-medium tracking-[0.34em] ${
             isLight ? "text-ivory-50/80" : "text-earth-700"
           }`}
         >

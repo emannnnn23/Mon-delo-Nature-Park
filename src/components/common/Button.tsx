@@ -23,6 +23,13 @@ type Shared = {
   variant?: ButtonVariant;
   /** Trailing Lucide icon, e.g. ArrowRight. */
   icon?: LucideIcon;
+  /**
+   * Extra utilities appended after the base and variant classes, for layout
+   * such as margins or width. It cannot override the base `display`, border
+   * or colour utilities: Tailwind orders those by its own rules, not by class
+   * order, so a conflicting class may lose. To change those, wrap the button
+   * in an element instead.
+   */
   className?: string;
   children: ReactNode;
 };

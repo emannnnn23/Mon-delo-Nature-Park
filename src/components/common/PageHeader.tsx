@@ -19,24 +19,24 @@ export function PageHeader({ title, body = null }: PageHeaderProps) {
         focusable="false"
         viewBox="0 0 1200 300"
         preserveAspectRatio="xMaxYMax slice"
-        className="absolute inset-0 -z-10 h-full w-full"
+        className="absolute inset-0 -z-10 h-full w-full text-gold-500"
       >
-        <circle cx="930" cy="214" r="46" fill="#d6aa55" opacity="0.9" />
+        <circle cx="930" cy="214" r="46" fill="currentColor" opacity="0.9" />
         <path
           d="M0 236 C160 196 280 192 420 220 S700 250 860 208 S1080 178 1200 206 V300 H0Z"
-          fill="#244b3a"
+          fill="var(--color-forest-800)"
         />
         <path
           d="M0 236 C160 196 280 192 420 220 S700 250 860 208 S1080 178 1200 206"
           fill="none"
-          stroke="#d6aa55"
+          stroke="currentColor"
           strokeWidth="2"
           opacity="0.55"
         />
         <path
           d="M0 268 C220 238 420 250 640 266 S980 276 1200 250 V300 H0Z"
-          fill="#10301f"
-          opacity="0.7"
+          fill="var(--color-ink-900)"
+          opacity="0.55"
         />
       </svg>
       <div className="mx-auto max-w-7xl px-5 pt-14 pb-24 sm:px-8 md:pt-20 md:pb-32">

@@ -3,7 +3,14 @@ import type { Announcement } from "../../types/content";
 
 type AnnouncementStripProps = { announcement: Announcement | null };
 
-/** Slim notice above the header. Renders nothing when there is no announcement. */
+/** A same-site path: one leading slash, not `//host` or `/\host`. */
+const INTERNAL_PATH = /^\/([^/\\]|$)/;
+
+/**
+ * Slim notice above the header. Renders nothing when there is no announcement.
+ * The link is a router Link for a site path, a new-tab anchor for `https://`,
+ * and left out for anything else.
+ */
 export function AnnouncementStrip({ announcement }: AnnouncementStripProps) {
   if (!announcement) return null;
   const { title, body, linkHref, linkLabel } = announcement;
@@ -22,21 +29,19 @@ export function AnnouncementStrip({ announcement }: AnnouncementStripProps) {
           <span className="font-semibold">{title}</span>
           {body ? <span className="text-ivory-50/80"> {body}</span> : null}
         </p>
-        {linkHref ? (
-          linkHref.startsWith("/") ? (
-            <Link to={linkHref} className={linkClass}>
-              {label}
-            </Link>
-          ) : (
-            <a
-              href={linkHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={linkClass}
-            >
-              {label}
-            </a>
-          )
+        {linkHref && INTERNAL_PATH.test(linkHref) ? (
+          <Link to={linkHref} className={linkClass}>
+            {label}
+          </Link>
+        ) : linkHref?.startsWith("https://") ? (
+          <a
+            href={linkHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={linkClass}
+          >
+            {label}
+          </a>
         ) : null}
       </div>
     </aside>

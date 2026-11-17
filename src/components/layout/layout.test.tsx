@@ -191,6 +191,49 @@ describe("AnnouncementStrip", () => {
     );
   });
 
+  function withHref(linkHref: string): Announcement {
+    return {
+      id: "1",
+      title: "Notice",
+      body: null,
+      linkLabel: "More",
+      linkHref,
+    };
+  }
+
+  it("opens an https link as an external anchor in a new tab", () => {
+    inRouter(
+      <AnnouncementStrip announcement={withHref("https://example.org/a")} />,
+    );
+    const link = screen.getByRole("link", { name: "More" });
+    expect(link).toHaveAttribute("href", "https://example.org/a");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+  });
+
+  it.each(["/", "/visit", "/discover/garden-walk"])(
+    "treats %s as an internal link",
+    (href) => {
+      inRouter(<AnnouncementStrip announcement={withHref(href)} />);
+      const link = screen.getByRole("link", { name: "More" });
+      expect(link).toHaveAttribute("href", href);
+      expect(link).not.toHaveAttribute("target");
+    },
+  );
+
+  it.each([
+    "//evil.example/x",
+    "/\\evil.example",
+    "http://example.org",
+    "javascript:alert(1)",
+    "mailto:a@b.c",
+    "visit",
+  ])("renders no link for %s", (href) => {
+    inRouter(<AnnouncementStrip announcement={withHref(href)} />);
+    expect(screen.getByText("Notice")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
   it("renders no link without linkHref", () => {
     inRouter(
       <AnnouncementStrip

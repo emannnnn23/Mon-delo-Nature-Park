@@ -54,6 +54,23 @@ function mockReducedMotion(matches: boolean) {
   );
 }
 
+/** Answers `(min-width: Npx|Nrem)` queries as a window `width` px wide. */
+function mockMatchMediaWidth(width: number) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn().mockImplementation((query: string) => {
+      const min = /min-width:\s*([\d.]+)(px|rem)/.exec(query);
+      const px = min ? Number(min[1]) * (min[2] === "rem" ? 16 : 1) : null;
+      return {
+        matches: px !== null && width >= px,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      };
+    }),
+  );
+}
+
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -148,6 +165,22 @@ describe("Intro and experiences", () => {
       expect(within(card).getByText("Sample")).toBeVisible();
     }
     expect(within(list).getByText("Beautiful Gardens")).toBeInTheDocument();
+  });
+
+  it("makes the experience row a tab stop only where it scrolls (below md)", () => {
+    mockMatchMediaWidth(375);
+    const { unmount } = renderHome();
+    expect(screen.getByRole("list", { name: "Experiences" })).toHaveAttribute(
+      "tabindex",
+      "0",
+    );
+    unmount();
+
+    mockMatchMediaWidth(1024);
+    renderHome();
+    expect(
+      screen.getByRole("list", { name: "Experiences" }),
+    ).not.toHaveAttribute("tabindex");
   });
 
   it("hides the experiences section when there are none", () => {

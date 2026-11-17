@@ -11,7 +11,8 @@ type ExperienceCardProps = {
 
 /**
  * Image card for an experience: a round forest badge with the experience icon
- * sits on the image's bottom edge, above a serif title and a two-line summary.
+ * sits on the image's bottom edge, above a serif title and a summary of up to
+ * three lines.
  */
 export function ExperienceCard({
   attraction,
@@ -48,7 +49,7 @@ export function ExperienceCard({
         <Heading className="font-serif text-xl leading-snug font-semibold break-words text-forest-900 xl:text-lg">
           {attraction.name}
         </Heading>
-        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-600">
+        <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-600">
           {attraction.summary}
         </p>
       </div>

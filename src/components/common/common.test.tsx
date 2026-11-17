@@ -119,6 +119,16 @@ describe("ResponsiveImage", () => {
     ).toBeInTheDocument();
   });
 
+  it("falls back to the placeholder when the asset has no variants", () => {
+    render(
+      <ResponsiveImage asset={{ ...asset, variants: {} }} sizes="100vw" />,
+    );
+    expect(
+      screen.getByRole("img", { name: "Photo coming soon" }),
+    ).toBeInTheDocument();
+    expect(document.querySelector("img")).toBeNull();
+  });
+
   it("renders a lazy responsive image with focal point", () => {
     render(
       <ResponsiveImage asset={asset} sizes="(min-width: 768px) 50vw, 100vw" />,
@@ -239,6 +249,20 @@ describe("MapEmbed", () => {
     const { container } = render(<MapEmbed src={null} title="Map" />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it.each([
+    "https://evil.example/maps/embed",
+    "http://www.google.com/maps/embed?pb=1",
+    "https://www.google.com.evil.example/maps/embed",
+    "javascript:alert(1)",
+    "https://www.google.com/maps/place/x",
+  ])(
+    "renders nothing for a source that is not a Google Maps embed: %s",
+    (src) => {
+      const { container } = render(<MapEmbed src={src} title="Map" />);
+      expect(container).toBeEmptyDOMElement();
+    },
+  );
 
   it("renders a lazy iframe", () => {
     render(

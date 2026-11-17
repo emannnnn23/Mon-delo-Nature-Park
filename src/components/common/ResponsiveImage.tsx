@@ -14,7 +14,8 @@ type ResponsiveImageProps = {
 
 /**
  * Renders a media asset with srcset, intrinsic size (no layout shift) and its
- * focal point. A null asset renders the placeholder tile instead.
+ * focal point. A null asset, or one without variants, renders the placeholder
+ * tile instead.
  */
 export function ResponsiveImage({
   asset,
@@ -22,7 +23,10 @@ export function ResponsiveImage({
   priority = false,
   className = "",
 }: ResponsiveImageProps) {
-  if (!asset) return <PlaceholderImage className={className} />;
+  // No variants means no file to point at: never emit the bucket root as src.
+  if (!asset || Object.keys(asset.variants).length === 0) {
+    return <PlaceholderImage className={className} />;
+  }
 
   return (
     <img

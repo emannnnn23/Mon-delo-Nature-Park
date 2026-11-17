@@ -27,7 +27,7 @@ export function ExperienceCards({
         aria-label="Experiences"
         // Focusable so the phone scroll row (no links inside) can be scrolled by keyboard.
         tabIndex={isGrid ? undefined : 0}
-        className="-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-1 pb-6 sm:-mx-8 sm:scroll-px-8 sm:px-8 md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0 xl:grid-cols-4 xl:gap-5"
+        className="-mx-5 scrollbar-none flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-1 pb-6 sm:-mx-8 sm:scroll-px-8 sm:px-8 md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0 xl:grid-cols-4 xl:gap-5"
       >
         {experiences.map((experience) => (
           <li

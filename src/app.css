@@ -77,6 +77,14 @@
   }
 }
 
+/* Swipe rows: the peeking next card already signals that the row scrolls. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
   body {
     @apply bg-ivory-50 font-sans text-ink-900 antialiased;

@@ -22,7 +22,7 @@ type Layout = {
 
 /** Swipeable row on phones, a grid from `md`. */
 const ROW =
-  "-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-1 pb-6 sm:-mx-8 sm:scroll-px-8 sm:px-8 md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0";
+  "-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto scrollbar-none px-5 pt-1 pb-6 sm:-mx-8 sm:scroll-px-8 sm:px-8 md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0";
 const ROW_ITEM = "w-[85%] max-w-96 shrink-0 snap-start md:w-auto md:max-w-none";
 const HALF = "(min-width: 768px) 50vw, 85vw";
 

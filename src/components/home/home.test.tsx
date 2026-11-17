@@ -269,6 +269,59 @@ describe("Gallery and testimonials band", () => {
     expect(screen.getByText(/Second quote text\./)).toBeInTheDocument();
   });
 
+  it("is not a live region while it auto-advances", () => {
+    mockReducedMotion(false);
+    renderHome({ testimonials: twoTestimonials });
+    const quote = screen.getByText(/First quote text\./);
+    expect(quote.closest("figure")).toHaveAttribute("aria-live", "off");
+  });
+
+  it("pauses auto-advance while hovered, and resumes on leave", () => {
+    mockReducedMotion(false);
+    vi.useFakeTimers();
+    renderHome({ testimonials: twoTestimonials });
+    const figure = screen.getByText(/First quote text\./).closest("figure");
+    const slider = figure?.parentElement?.parentElement;
+    if (!figure || !slider) throw new Error("slider not found");
+
+    fireEvent.mouseEnter(slider);
+    act(() => {
+      vi.advanceTimersByTime(15000);
+    });
+    expect(screen.getByText(/First quote text\./)).toBeInTheDocument();
+    expect(figure).toHaveAttribute("aria-live", "polite");
+
+    fireEvent.mouseLeave(slider);
+    act(() => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(screen.getByText(/Second quote text\./)).toBeInTheDocument();
+  });
+
+  it("pauses auto-advance while focus is inside, and resumes on blur", () => {
+    mockReducedMotion(false);
+    vi.useFakeTimers();
+    renderHome({ testimonials: twoTestimonials });
+    const next = screen.getByRole("button", { name: "Next review" });
+
+    act(() => {
+      next.focus();
+    });
+    act(() => {
+      vi.advanceTimersByTime(15000);
+    });
+    const quote = screen.getByText(/First quote text\./);
+    expect(quote.closest("[aria-live='polite']")).not.toBeNull();
+
+    act(() => {
+      next.blur();
+    });
+    act(() => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(screen.getByText(/Second quote text\./)).toBeInTheDocument();
+  });
+
   it("does not auto-advance under reduced motion and is then a polite live region", () => {
     mockReducedMotion(true);
     vi.useFakeTimers();

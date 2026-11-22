@@ -13,6 +13,39 @@ const FOCUSABLE = [
   '[contenteditable="true"]',
 ].join(", ");
 
+/**
+ * True when the document has no layout engine (jsdom: `getClientRects()` is
+ * empty for every element, even visible ones). The root element always has a
+ * box in a real browser, so an empty list on it means there is no layout and
+ * "has a box" cannot be used to decide visibility.
+ */
+function hasNoLayout(): boolean {
+  return document.documentElement.getClientRects().length === 0;
+}
+
+/** Hidden by markup or inline/author style, checked without needing layout. */
+function isHiddenByStyle(el: HTMLElement): boolean {
+  for (let node: HTMLElement | null = el; node; node = node.parentElement) {
+    const style = getComputedStyle(node);
+    if (style.display === "none" || style.visibility === "hidden") return true;
+  }
+  return false;
+}
+
+/**
+ * A tab stop a keyboard user can actually reach: tabindex >= 0, not inside a
+ * `[hidden]` or `[inert]` subtree, and rendered. "Rendered" means it has a box
+ * (`getClientRects().length > 0`), which catches `display:none` anywhere up
+ * the tree. Environments without layout (jsdom) cannot answer that, so there
+ * the check falls back to computed `display:none` / `visibility:hidden` on the
+ * element and its ancestors, which is all such an environment can observe.
+ */
+function isTabbable(el: HTMLElement, noLayout: boolean): boolean {
+  if (el.tabIndex < 0) return false;
+  if (el.closest("[hidden], [inert]")) return false;
+  return noLayout ? !isHiddenByStyle(el) : el.getClientRects().length > 0;
+}
+
 type FocusTrapOptions = {
   /** Focused when the trap activates. Defaults to nothing. */
   initialFocusRef?: RefObject<HTMLElement | null>;
@@ -59,9 +92,10 @@ export function useFocusTrap(
       if (event.key !== "Tab") return;
       const container = containerRef.current;
       if (!container) return;
+      const noLayout = hasNoLayout();
       const items = Array.from(
         container.querySelectorAll<HTMLElement>(FOCUSABLE),
-      );
+      ).filter((el) => isTabbable(el, noLayout));
       if (items.length === 0) return;
       const first = items[0];
       const last = items[items.length - 1];

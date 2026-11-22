@@ -7,6 +7,7 @@ import { useFocusTrap } from "~/hooks/useFocusTrap";
 import { useSession } from "~/hooks/useSession";
 import { signOut } from "~/services/auth";
 
+import { Toast } from "../components/Toast";
 import { ADMIN_NAV } from "../nav";
 
 type AdminLayoutProps = {
@@ -197,6 +198,8 @@ export function AdminLayout({ email }: AdminLayoutProps) {
           <Outlet />
         </main>
       </div>
+
+      <Toast />
 
       {menuOpen ? (
         <PhoneMenu

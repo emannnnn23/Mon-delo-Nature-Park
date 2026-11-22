@@ -35,6 +35,8 @@ npx supabase db lint --level warning            # must report no issues
 
 Local Supabase runs as project `mondelos` on ports 553xx (API 55321, DB 55322). Other projects on this machine use 5432x: never touch their containers. Start it only for database work and stop it when done.
 
+Always run `npx supabase …` from the repository root (or pass `--workdir <repo root>`). From any other folder the CLI finds no `supabase/config.toml` and falls back to port 54322, which belongs to another project. Never connect to ports 5432x; use `psql -h 127.0.0.1 -p 55322` when you need psql.
+
 ## Do and don't
 
 | Rule                                                                                                                                                                                                                                                      | Why                                                                                                     |

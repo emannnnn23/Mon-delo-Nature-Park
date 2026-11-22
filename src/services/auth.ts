@@ -1,6 +1,13 @@
 import { getSupabase } from "~/lib/supabase";
 
-export type SignInResult = { ok: true } | { ok: false; message: string };
+export type SignInResult =
+  | { ok: true }
+  | {
+      ok: false;
+      message: string;
+      /** True when the email or password was wrong (not a network or rate-limit problem). */
+      invalidCredentials?: true;
+    };
 export type AdminStatus = "anonymous" | "not-admin" | "admin" | "unavailable";
 
 const NOT_CONFIGURED = "The admin isn't configured on this site yet.";
@@ -34,7 +41,15 @@ export async function signIn(
       email: email.trim(),
       password,
     });
-    if (error) return { ok: false, message: signInMessage(error.code) };
+    if (error) {
+      return {
+        ok: false,
+        message: signInMessage(error.code),
+        ...(error.code === "invalid_credentials"
+          ? { invalidCredentials: true as const }
+          : {}),
+      };
+    }
     return { ok: true };
   } catch {
     return {

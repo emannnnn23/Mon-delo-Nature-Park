@@ -71,6 +71,7 @@ describe("signIn", () => {
     expect(await signIn("a@b.co", "wrong")).toEqual({
       ok: false,
       message: "Incorrect email or password.",
+      invalidCredentials: true,
     });
   });
 

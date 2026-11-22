@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { Button } from "~/components/common/Button";
@@ -7,7 +7,9 @@ import { safeNext } from "~/admin/lib/safeNext";
 import { signIn } from "~/services/auth";
 
 const NOTICES: Record<string, string> = {
-  expired: "Your session has expired — please sign in again.",
+  // Supabase cannot say why a session ended (expired, revoked, or signed out
+  // in another tab), so the copy does not claim a cause.
+  expired: "You’ve been signed out. Please sign in again.",
   "not-admin":
     "This account doesn’t have access to the admin. Please sign in with an admin account.",
 };
@@ -20,32 +22,53 @@ type LoginPageProps = {
   configured: boolean;
 };
 
+type LoginError = { message: string; invalidCredentials: boolean };
+
 export function LoginPage({ configured }: LoginPageProps) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LoginError | null>(null);
   const [pending, setPending] = useState(false);
+  const errorRef = useRef<HTMLDivElement>(null);
 
   const reason = params.get("reason");
   const notice =
     reason !== null && Object.hasOwn(NOTICES, reason) ? NOTICES[reason] : null;
 
+  // A new error object on every failure, so focus moves even when the message
+  // is the same as last time.
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
-    const form = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const values = new FormData(form);
     setPending(true);
     setError(null);
     const result = await signIn(
-      String(form.get("email") ?? ""),
-      String(form.get("password") ?? ""),
+      String(values.get("email") ?? ""),
+      String(values.get("password") ?? ""),
     );
-    if (result.ok) {
-      await navigate(safeNext(params.get("next")), { replace: true });
+    if (!result.ok) {
+      setError({
+        message: result.message,
+        invalidCredentials: result.invalidCredentials === true,
+      });
+      setPending(false);
       return;
     }
-    setError(result.message);
-    setPending(false);
+    try {
+      await navigate(safeNext(params.get("next")), { replace: true });
+    } finally {
+      // The guard can send a signed-in non-admin straight back to this same
+      // route (no remount), so the form must be usable again.
+      const password = form.elements.namedItem("password");
+      if (password instanceof HTMLInputElement) password.value = "";
+      setPending(false);
+    }
   }
 
   return (
@@ -62,14 +85,16 @@ export function LoginPage({ configured }: LoginPageProps) {
           Manage the Mondelos Nature Park website.
         </p>
 
-        {notice ? (
-          <p
-            role="status"
-            className="mt-6 rounded-lg bg-cream-100 px-4 py-3 text-sm text-ink-900"
-          >
-            {notice}
-          </p>
-        ) : null}
+        {/* Live regions stay mounted and are filled on change, so screen
+            readers announce the text; one that appears with its content is
+            often missed. */}
+        <div role="status" className="mt-6 empty:hidden">
+          {notice ? (
+            <p className="rounded-lg bg-cream-100 px-4 py-3 text-sm text-ink-900">
+              {notice}
+            </p>
+          ) : null}
+        </div>
 
         {configured ? (
           <form onSubmit={onSubmit} className="mt-6">
@@ -86,6 +111,8 @@ export function LoginPage({ configured }: LoginPageProps) {
                 type="email"
                 autoComplete="username"
                 required
+                aria-invalid={error?.invalidCredentials ? true : undefined}
+                aria-describedby={error ? "login-error" : undefined}
                 className={FIELD}
               />
             </div>
@@ -102,20 +129,20 @@ export function LoginPage({ configured }: LoginPageProps) {
                 type="password"
                 autoComplete="current-password"
                 required
-                aria-invalid={error ? true : undefined}
+                aria-invalid={error?.invalidCredentials ? true : undefined}
                 aria-describedby={error ? "login-error" : undefined}
                 className={FIELD}
               />
             </div>
-            {error ? (
-              <p
-                id="login-error"
-                role="alert"
-                className="mt-4 text-sm font-semibold text-red-700"
-              >
-                {error}
-              </p>
-            ) : null}
+            <div
+              id="login-error"
+              ref={errorRef}
+              role="alert"
+              tabIndex={-1}
+              className="mt-4 rounded-sm text-sm font-semibold text-red-700 empty:hidden"
+            >
+              {error?.message}
+            </div>
             <Button type="submit" disabled={pending} className="mt-7 w-full">
               {pending ? "Signing in…" : "Sign in"}
             </Button>

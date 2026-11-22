@@ -51,11 +51,11 @@ describe("LoginPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the expiry message for ?reason=expired", async () => {
+  it("says the user was signed out for ?reason=expired", async () => {
     renderAt("/admin/login?reason=expired");
     expect(
       await screen.findByText(
-        "Your session has expired — please sign in again.",
+        "You\u2019ve been signed out. Please sign in again.",
       ),
     ).toBeInTheDocument();
   });
@@ -70,7 +70,14 @@ describe("LoginPage", () => {
   it("ignores an unknown reason", async () => {
     renderAt("/admin/login?reason=<script>");
     await screen.findByRole("heading", { level: 1 });
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  it("keeps one live region for notices, present even when empty", async () => {
+    renderAt("/admin/login");
+    const status = await screen.findByRole("status");
+    expect(status).toBeEmptyDOMElement();
+    expect(screen.getByRole("alert")).toBeEmptyDOMElement();
   });
 
   it("says the admin is not configured, and offers no form", async () => {
@@ -112,17 +119,38 @@ describe("LoginPage", () => {
     vi.mocked(signIn).mockResolvedValue({
       ok: false,
       message: "Incorrect email or password.",
+      invalidCredentials: true,
     });
     renderAt("/admin/login");
     await submit();
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Incorrect email or password.");
+    await waitFor(() =>
+      expect(alert).toHaveTextContent("Incorrect email or password."),
+    );
+    expect(screen.getByLabelText("Email")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
     const password = screen.getByLabelText("Password");
     expect(password).toHaveAttribute("aria-invalid", "true");
     expect(password).toHaveAccessibleDescription(
       "Incorrect email or password.",
     );
     expect(screen.queryByText("Dashboard page")).not.toBeInTheDocument();
+  });
+
+  it("moves focus to the error after a failed sign-in, every time", async () => {
+    vi.mocked(signIn).mockResolvedValue({ ok: false, message: "Nope." });
+    renderAt("/admin/login");
+    await submit();
+    const alert = await screen.findByRole("alert");
+    await waitFor(() => expect(alert).toHaveFocus());
+    // Not a credentials error: the fields are not marked invalid.
+    expect(screen.getByLabelText("Email")).not.toHaveAttribute("aria-invalid");
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("Email"));
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(alert).toHaveFocus());
   });
 
   it("disables the button while signing in", async () => {

@@ -9,6 +9,11 @@ type AdminModalProps = {
   children: ReactNode;
   /** Wider panel for grids. */
   wide?: boolean;
+  /**
+   * While true (an upload is running) Escape, the backdrop and the close
+   * button do nothing, so a late result cannot arrive in a closed dialog.
+   */
+  busy?: boolean;
 };
 
 /**
@@ -22,18 +27,22 @@ export function AdminModal({
   onClose,
   children,
   wide = false,
+  busy = false,
 }: AdminModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
-  useFocusTrap(panelRef, true, onClose, { initialFocusRef: closeRef });
+  const close = () => {
+    if (!busy) onClose();
+  };
+  useFocusTrap(panelRef, true, close, { initialFocusRef: closeRef });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-ink-900/60"
-        onClick={onClose}
+        onClick={close}
       />
       <div
         ref={panelRef}
@@ -56,8 +65,9 @@ export function AdminModal({
             ref={closeRef}
             type="button"
             aria-label="Close"
-            onClick={onClose}
-            className="-mt-1 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-cream-100"
+            aria-disabled={busy || undefined}
+            onClick={close}
+            className="-mt-1 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-cream-100 aria-disabled:opacity-60"
           >
             <X aria-hidden="true" className="size-5" />
           </button>

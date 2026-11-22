@@ -17,6 +17,13 @@ const RETRY_QUALITY = 0.6;
 const BUCKET = "media";
 const ENTITY = "photo";
 
+/** Owner-facing names of the pages that have editable sections. */
+const PAGE_NAMES: Record<string, string> = {
+  home: "Home page",
+  about: "About page",
+  visit: "Visit page",
+};
+
 /** Thrown when a photo is still used somewhere and so cannot be deleted. */
 export class MediaInUseError extends AdminError {
   readonly usedBy: string[];
@@ -117,7 +124,15 @@ export async function uploadImage(
   let bitmap: ImageBitmap;
   try {
     if (typeof createImageBitmap !== "function") throw new Error("unsupported");
-    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    try {
+      bitmap = await createImageBitmap(file, {
+        imageOrientation: "from-image",
+      });
+    } catch (e) {
+      // Older Safari and Chromium reject the option itself (a TypeError).
+      if (!(e instanceof TypeError)) throw e;
+      bitmap = await createImageBitmap(file);
+    }
   } catch {
     throw new AdminError(
       "UNREADABLE",
@@ -258,7 +273,7 @@ export async function findMediaUsage(id: string): Promise<string[]> {
       run(
         supabase
           .from("page_sections")
-          .select("key, heading")
+          .select("page, heading")
           .eq("media_id", id),
       ),
       run(supabase.from("attractions").select("name").eq("cover_media_id", id)),
@@ -278,9 +293,11 @@ export async function findMediaUsage(id: string): Promise<string[]> {
     ]);
 
   const labels = [
-    ...(sections ?? []).map(
-      (s) => `Page section: ${s.heading?.trim() || s.key}`,
-    ),
+    ...(sections ?? []).map((s) => {
+      const where = `${PAGE_NAMES[s.page] ?? "Page"} section`;
+      const heading = s.heading?.trim();
+      return heading ? `${where}: ${heading}` : where;
+    }),
     ...(attractions ?? []).map((a) => `Attraction: ${a.name}`),
     ...(attractionImages ?? []).map(
       (a) => `Attraction photo: ${a.attractions?.name ?? "unnamed"}`,
@@ -288,7 +305,10 @@ export async function findMediaUsage(id: string): Promise<string[]> {
     ...(gallery ?? []).map(() => "Gallery image"),
     ...(settings ?? []).map(() => "Social sharing image (Contact & settings)"),
   ];
-  return [...new Set(labels)];
+  // Each place once, with a count when it repeats ("Gallery image (3)").
+  const counts = new Map<string, number>();
+  for (const label of labels) counts.set(label, (counts.get(label) ?? 0) + 1);
+  return [...counts].map(([label, n]) => (n > 1 ? `${label} (${n})` : label));
 }
 
 /**
@@ -302,13 +322,13 @@ export async function deleteMedia(
   row: MediaRow,
 ): Promise<{ storageCleanupFailed: boolean }> {
   const supabase = client();
-  let result: QueryResult<{ id: string }[] | null>;
+  let result: QueryResult<{ id: string; variants: unknown }[] | null>;
   try {
     result = await supabase
       .from("media")
       .delete()
       .eq("id", row.id)
-      .select("id");
+      .select("id, variants");
   } catch (e) {
     throw toFriendlyError(e, { entity: ENTITY });
   }
@@ -326,8 +346,12 @@ export async function deleteMedia(
   }
   if (!result.data || result.data.length === 0) throw noRowsError();
 
-  const paths = Object.values(row.variants as Record<string, unknown>).filter(
-    (p): p is string => typeof p === "string",
-  );
+  // What the database says it deleted is authoritative; the copy held by the
+  // page may be stale.
+  const deleted = result.data[0].variants;
+  const paths =
+    typeof deleted === "object" && deleted !== null && !Array.isArray(deleted)
+      ? Object.values(deleted).filter((p): p is string => typeof p === "string")
+      : [];
   return { storageCleanupFailed: !(await removeObjects(paths)) };
 }

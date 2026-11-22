@@ -1,4 +1,7 @@
+import { useRouteError } from "react-router";
+
 import { MediaLibraryPage } from "~/admin/pages/MediaLibraryPage";
+import { toFriendlyError } from "~/services/admin/errors";
 import { listMedia } from "~/services/media";
 import type { Route } from "./+types/media";
 
@@ -18,6 +21,8 @@ export default function Media({ loaderData }: Route.ComponentProps) {
 
 /** Shown inside the admin layout, so the menu stays available. */
 export function ErrorBoundary() {
+  const error = useRouteError();
+  const { friendly } = toFriendlyError(error, { entity: "photo" });
   return (
     <section aria-labelledby="media-error-title">
       <h1
@@ -27,8 +32,7 @@ export function ErrorBoundary() {
         Media library
       </h1>
       <p role="alert" className="mt-3 max-w-xl font-semibold text-red-700">
-        We couldn&rsquo;t load the photos. Check your connection, then reload
-        the page.
+        {friendly}
       </p>
     </section>
   );

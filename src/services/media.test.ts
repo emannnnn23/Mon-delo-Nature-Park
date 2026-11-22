@@ -295,6 +295,30 @@ describe("uploadImage", () => {
     expect(createImageBitmap).not.toHaveBeenCalled();
   });
 
+  it("retries without options when the browser rejects imageOrientation", async () => {
+    const create = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("invalid enum value"))
+      .mockResolvedValueOnce(bitmap);
+    vi.stubGlobal("createImageBitmap", create);
+    queue("media", ok(mediaRow()));
+    await expect(uploadImage(jpeg(), "Alt", "gallery")).resolves.toBeDefined();
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(create.mock.calls[0][1]).toEqual({ imageOrientation: "from-image" });
+    expect(create.mock.calls[1]).toHaveLength(1);
+  });
+
+  it("does not retry for other decode errors", async () => {
+    const create = vi.fn(async () => {
+      throw new Error("decode failed");
+    });
+    vi.stubGlobal("createImageBitmap", create);
+    await expect(uploadImage(jpeg(), "Alt", "gallery")).rejects.toBeInstanceOf(
+      AdminError,
+    );
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
   it("says so when the photo cannot be read", async () => {
     vi.stubGlobal(
       "createImageBitmap",
@@ -393,12 +417,38 @@ describe("findMediaUsage", () => {
     queue("site_settings", ok([{ id: "s1" }]));
     const usage = await findMediaUsage("m1");
     expect(usage).toEqual([
-      "Page section: Welcome",
+      "Home page section: Welcome",
       "Attraction: Scenic Views",
       "Attraction photo: Blue Lagoon",
-      "Gallery image",
+      "Gallery image (2)",
       "Social sharing image (Contact & settings)",
     ]);
+  });
+
+  it("names the page, never an internal key, and counts repeats", async () => {
+    queue(
+      "page_sections",
+      ok([
+        { key: "hero", heading: null, page: "about" },
+        { key: "story", heading: "  ", page: "about" },
+        { key: "map", heading: "Find us", page: "visit" },
+      ]),
+    );
+    queue(
+      "attraction_images",
+      ok([
+        { attractions: { name: "Blue Lagoon" } },
+        { attractions: { name: "Blue Lagoon" } },
+        { attractions: { name: "Blue Lagoon" } },
+      ]),
+    );
+    const usage = await findMediaUsage("m1");
+    expect(usage).toEqual([
+      "About page section (2)",
+      "Visit page section: Find us",
+      "Attraction photo: Blue Lagoon (3)",
+    ]);
+    expect(usage.join(" ")).not.toMatch(/hero|story/);
   });
 
   it("is empty when nothing uses it", async () => {
@@ -420,7 +470,7 @@ describe("deleteMedia", () => {
   });
 
   it("deletes the row first, then removes every variant file", async () => {
-    queue("media", ok([{ id: "m1" }]));
+    queue("media", ok([{ id: "m1", variants: mediaRow().variants }]));
     const row = mediaRow();
     await expect(deleteMedia(row)).resolves.toEqual({
       storageCleanupFailed: false,
@@ -432,9 +482,23 @@ describe("deleteMedia", () => {
     expect(fake.state.removed).toEqual([Object.values(row.variants)]);
   });
 
+  it("removes the paths the database returns, not the ones the client holds", async () => {
+    const stored = {
+      "480": "2026/real-aaaaaa-480.webp",
+      "960": "2026/real-aaaaaa-960.webp",
+    };
+    queue("media", ok([{ id: "m1", variants: stored }]));
+    // A stale or tampered client copy must not decide what is deleted.
+    const stale = mediaRow({ variants: { "480": "2026/other-file.webp" } });
+    await deleteMedia(stale);
+    expect(fake.state.removed).toEqual([Object.values(stored)]);
+    const del = fake.state.calls.find((c) => c.op === "select");
+    expect(del?.args).toEqual(["id, variants"]);
+  });
+
   it("reports (does not throw) when the files cannot be removed after the row is gone", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    queue("media", ok([{ id: "m1" }]));
+    queue("media", ok([{ id: "m1", variants: mediaRow().variants }]));
     fake.state.removeResult = { error: { message: "nope" } };
     await expect(deleteMedia(mediaRow())).resolves.toEqual({
       storageCleanupFailed: true,

@@ -65,27 +65,35 @@ describe("validateImageFile", () => {
   });
 });
 
-type BlobCall = { type: string | undefined; quality: number | undefined };
+type BlobCall = {
+  type: string | undefined;
+  quality: number | undefined;
+  size?: [number, number];
+};
 
 function fakeCanvas(results: Array<Blob | null>) {
   const calls: BlobCall[] = [];
+  const ops: string[] = [];
+  const context = {
+    fillStyle: "",
+    imageSmoothingQuality: "low",
+    drawImage: () => ops.push("drawImage"),
+    fillRect: () => ops.push(`fillRect:${context.fillStyle}`),
+  };
   const canvas = {
     width: 0,
     height: 0,
-    getContext: () => ({
-      drawImage: () => {},
-      imageSmoothingQuality: "low",
-    }),
+    getContext: () => context,
     toBlob: (
       cb: (blob: Blob | null) => void,
       type?: string,
       quality?: number,
     ) => {
-      calls.push({ type, quality });
+      calls.push({ type, quality, size: [canvas.width, canvas.height] });
       cb(results.shift() ?? null);
     },
   };
-  return { canvas: canvas as unknown as HTMLCanvasElement, calls };
+  return { canvas: canvas as unknown as HTMLCanvasElement, calls, ops };
 }
 
 const bitmap = { width: 3000, height: 2000 } as ImageBitmap;
@@ -98,9 +106,10 @@ describe("encodeVariant", () => {
       createCanvas: () => canvas,
     });
     expect(out).toEqual({ blob: webp, ext: "webp" });
-    expect(canvas.width).toBe(960);
-    expect(canvas.height).toBe(640);
-    expect(calls).toEqual([{ type: "image/webp", quality: 0.8 }]);
+    // The size at the moment of encoding (the canvas is released afterwards).
+    expect(calls).toEqual([
+      { type: "image/webp", quality: 0.8, size: [960, 640] },
+    ]);
   });
 
   it("re-encodes as JPEG at 0.82 when the browser answers PNG (Safari)", async () => {
@@ -111,7 +120,7 @@ describe("encodeVariant", () => {
       createCanvas: () => canvas,
     });
     expect(out).toEqual({ blob: jpeg, ext: "jpg" });
-    expect(calls).toEqual([
+    expect(calls.map(({ type, quality }) => ({ type, quality }))).toEqual([
       { type: "image/webp", quality: 0.8 },
       { type: "image/jpeg", quality: 0.82 },
     ]);
@@ -125,6 +134,43 @@ describe("encodeVariant", () => {
       quality: 0.6,
     });
     expect(calls[0].quality).toBe(0.6);
+  });
+
+  it("paints the canvas white before drawing for the JPEG fallback", async () => {
+    const png = new Blob(["p"], { type: "image/png" });
+    const jpeg = new Blob(["j"], { type: "image/jpeg" });
+    const { canvas, ops } = fakeCanvas([png, jpeg]);
+    await encodeVariant(bitmap, 480, { createCanvas: () => canvas });
+    // WebP keeps transparency, so the first draw is plain; the JPEG pass
+    // fills white first so transparent areas are not black.
+    expect(ops).toEqual(["drawImage", "fillRect:#ffffff", "drawImage"]);
+  });
+
+  it("releases the canvas memory after a successful encode", async () => {
+    const webp = new Blob(["w"], { type: "image/webp" });
+    const { canvas } = fakeCanvas([webp]);
+    await encodeVariant(bitmap, 960, { createCanvas: () => canvas });
+    expect(canvas.width).toBe(0);
+    expect(canvas.height).toBe(0);
+  });
+
+  it("releases the canvas memory after a failed encode", async () => {
+    const { canvas } = fakeCanvas([null]);
+    await expect(
+      encodeVariant(bitmap, 960, { createCanvas: () => canvas }),
+    ).rejects.toThrow();
+    expect(canvas.width).toBe(0);
+    expect(canvas.height).toBe(0);
+  });
+
+  it("releases the canvas when it has no 2d context", async () => {
+    const { canvas } = fakeCanvas([]);
+    canvas.getContext = () => null;
+    await expect(
+      encodeVariant(bitmap, 960, { createCanvas: () => canvas }),
+    ).rejects.toThrow();
+    expect(canvas.width).toBe(0);
+    expect(canvas.height).toBe(0);
   });
 
   it("fails when the browser cannot encode at all", async () => {

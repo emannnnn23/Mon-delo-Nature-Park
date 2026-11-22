@@ -184,6 +184,21 @@ describe("MediaLibraryPage", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Photo deleted.");
   });
 
+  it("moves focus to the page heading after a delete", async () => {
+    vi.mocked(deleteMedia).mockResolvedValue({ storageCleanupFailed: false });
+    renderPage();
+    const dialog = await openEditor("Viewing deck");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Delete" }),
+    );
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Delete photo" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Media library" }),
+    ).toHaveFocus();
+  });
+
   it("does not delete when the confirmation is cancelled", async () => {
     renderPage();
     const dialog = await openEditor("Viewing deck");

@@ -71,25 +71,37 @@ export async function encodeVariant(
   const canvas = (
     options.createCanvas ?? (() => document.createElement("canvas"))
   )();
-  canvas.width = width;
-  canvas.height = Math.max(
-    1,
-    Math.round((bitmap.height * width) / bitmap.width),
-  );
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas is not available");
-  context.imageSmoothingQuality = "high";
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  try {
+    canvas.width = width;
+    canvas.height = Math.max(
+      1,
+      Math.round((bitmap.height * width) / bitmap.width),
+    );
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is not available");
+    context.imageSmoothingQuality = "high";
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-  const quality = options.quality ?? WEBP_QUALITY;
-  const webp = await toBlob(canvas, "image/webp", quality);
-  if (webp && webp.type === "image/webp") return { blob: webp, ext: "webp" };
+    const quality = options.quality ?? WEBP_QUALITY;
+    const webp = await toBlob(canvas, "image/webp", quality);
+    if (webp && webp.type === "image/webp") return { blob: webp, ext: "webp" };
 
-  const jpeg = await toBlob(
-    canvas,
-    "image/jpeg",
-    options.quality ?? JPEG_QUALITY,
-  );
-  if (!jpeg) throw new Error("Could not encode the image");
-  return { blob: jpeg, ext: "jpg" };
+    // JPEG has no transparency: paint white first so transparent areas of a
+    // PNG do not turn black.
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const jpeg = await toBlob(
+      canvas,
+      "image/jpeg",
+      options.quality ?? JPEG_QUALITY,
+    );
+    if (!jpeg) throw new Error("Could not encode the image");
+    return { blob: jpeg, ext: "jpg" };
+  } finally {
+    // Browsers (iOS Safari especially) cap the total canvas memory of a page;
+    // a zero-size canvas gives its bitmap back at once.
+    canvas.width = 0;
+    canvas.height = 0;
+  }
 }

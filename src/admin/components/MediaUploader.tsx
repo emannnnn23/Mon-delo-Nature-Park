@@ -20,6 +20,8 @@ type MediaUploaderProps = {
   purpose: "cover" | "gallery";
   multiple?: boolean;
   onUploaded: (rows: MediaRow[]) => void;
+  /** Called with true while uploads run, so a dialog can refuse to close. */
+  onBusyChange?: (busy: boolean) => void;
 };
 
 type Item = {
@@ -65,6 +67,7 @@ export function MediaUploader({
   purpose,
   multiple = false,
   onUploaded,
+  onBusyChange,
 }: MediaUploaderProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -72,8 +75,16 @@ export function MediaUploader({
   const [summary, setSummary] = useState("");
   const nextId = useRef(1);
   const focusInvalid = useRef(false);
+  const busyRef = useRef(onBusyChange);
   const listRef = useRef<HTMLUListElement>(null);
   const inputId = useId();
+
+  useEffect(() => {
+    busyRef.current = onBusyChange;
+  });
+  useEffect(() => {
+    busyRef.current?.(uploading);
+  }, [uploading]);
 
   // After a refused upload, move to the first description that needs filling.
   useEffect(() => {

@@ -269,6 +269,13 @@ export function MediaLibraryPage({
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = rows.find((r) => r.id === editingId) ?? null;
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const [deletions, setDeletions] = useState(0);
+
+  // The photo that was focused is gone: continue from the page heading.
+  useEffect(() => {
+    if (deletions > 0) headingRef.current?.focus();
+  }, [deletions]);
 
   return (
     <section aria-labelledby="media-title">
@@ -276,7 +283,9 @@ export function MediaLibraryPage({
         <div>
           <h1
             id="media-title"
-            className="font-serif text-3xl font-bold text-forest-900"
+            ref={headingRef}
+            tabIndex={-1}
+            className="font-serif text-3xl font-bold text-forest-900 focus:outline-none"
           >
             Media library
           </h1>
@@ -327,6 +336,7 @@ export function MediaLibraryPage({
           onDeleted={(gone) => {
             setRows((cur) => cur.filter((r) => r.id !== gone.id));
             setEditingId(null);
+            setDeletions((n) => n + 1);
           }}
         />
       ) : null}

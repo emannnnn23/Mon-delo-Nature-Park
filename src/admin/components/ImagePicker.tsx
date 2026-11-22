@@ -102,6 +102,7 @@ export function ImagePicker({
   clearable = false,
 }: ImagePickerProps) {
   const [dialog, setDialog] = useState<"library" | "upload" | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -156,9 +157,14 @@ export function ImagePicker({
         />
       ) : null}
       {dialog === "upload" ? (
-        <AdminModal title="Upload a photo" onClose={() => setDialog(null)}>
+        <AdminModal
+          title="Upload a photo"
+          busy={uploading}
+          onClose={() => setDialog(null)}
+        >
           <MediaUploader
             purpose={purpose}
+            onBusyChange={setUploading}
             onUploaded={(rows) => {
               if (rows[0]) onChange(rows[0]);
               setDialog(null);

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
@@ -341,6 +341,55 @@ describe("ImagePicker", () => {
     expect(
       await screen.findByRole("img", { name: "Fresh view" }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("cannot be closed while an upload is running, then applies the result", async () => {
+    let finish: (r: MediaRow) => void = () => {};
+    vi.mocked(uploadImage).mockReturnValue(
+      new Promise<MediaRow>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: "Upload new" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Upload a photo",
+    });
+    await user().upload(
+      within(dialog).getByLabelText("Choose a photo"),
+      jpeg("slow.jpg"),
+    );
+    await within(dialog).findByLabelText("Describe slow.jpg");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Upload photo" }),
+    );
+
+    expect(
+      await within(dialog).findByRole("button", { name: "Uploading…" }),
+    ).toBeDisabled();
+    // Escape, the close button and the backdrop all do nothing meanwhile.
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Close" }),
+    );
+    expect(screen.getByRole("dialog", { name: "Upload a photo" })).toBe(dialog);
+    expect(
+      within(dialog).getByRole("button", { name: "Close" }),
+    ).toHaveAttribute("aria-disabled", "true");
+
+    await act(async () => finish(row("slow", "Slow view")));
+    expect(
+      await screen.findByRole("img", { name: "Slow view" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes the upload dialog with Escape when idle", async () => {
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: "Upload new" }));
+    await screen.findByRole("dialog", { name: "Upload a photo" });
+    await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 

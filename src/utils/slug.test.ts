@@ -24,6 +24,15 @@ describe("slugify", () => {
   });
 });
 
+describe("slugify source", () => {
+  it("writes the diacritic range with escapes, not invisible characters", async () => {
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync("src/utils/slug.ts", "utf8");
+    expect(source).toContain("[\\u0300-\\u036f]");
+    expect(source).not.toMatch(/[\u0300-\u036f]/);
+  });
+});
+
 describe("shortId", () => {
   it("is 6 characters of [a-z0-9]", () => {
     for (let i = 0; i < 50; i++) expect(shortId()).toMatch(/^[a-z0-9]{6}$/);

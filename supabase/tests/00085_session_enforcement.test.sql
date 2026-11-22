@@ -1,5 +1,5 @@
 begin;
-select plan(49);
+select plan(52);
 
 -- is_admin() is the one server-side admin gate: every admin policy, the
 -- dashboard view and the media storage policies call it. It must be true only
@@ -205,6 +205,25 @@ select is(
   tests.row_count($q$update public.page_sections set heading = 'hacked'$q$),
   0::bigint, 'a user whose profile was removed updates no section'
 );
+select tests.reset_role();
+
+-- Banned or soft-deleted user with a live session ----------------------------------
+select tests.create_user('session-banned@example.test', true) as z \gset
+select tests.create_session(:'z') as z_live \gset
+
+update auth.users set banned_until = now() + interval '1 day' where id = :'z';
+select tests.authenticate_as_session(:'z', :'z_live');
+select is(public.is_admin(), false, 'a banned admin with a live session is not admin');
+select tests.reset_role();
+
+update auth.users set banned_until = now() - interval '1 minute' where id = :'z';
+select tests.authenticate_as_session(:'z', :'z_live');
+select is(public.is_admin(), true, 'an admin whose ban has expired is admin again');
+select tests.reset_role();
+
+update auth.users set banned_until = null, deleted_at = now() where id = :'z';
+select tests.authenticate_as_session(:'z', :'z_live');
+select is(public.is_admin(), false, 'a soft-deleted admin with a live session is not admin');
 select tests.reset_role();
 
 -- Non-admin with a live session ---------------------------------------------------

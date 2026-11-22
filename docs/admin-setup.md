@@ -63,14 +63,17 @@ Set these in the Supabase Dashboard for the project. Labels move between release
 1. Go to **Authentication** → **Sessions** (on some versions the setting is under **Project Settings** → **JWT Keys**, or **Authentication** → **Settings**).
 2. Set the access token (JWT) expiry to **900** seconds (15 minutes). The website refreshes the token in the background, so admins are not signed out every 15 minutes.
 3. Keep **refresh token rotation** turned on. Leave the reuse interval at its default (10 seconds).
-4. Optional, depending on the plan: **time-box user sessions** (for example 24 hours) and an **inactivity timeout** (for example 8 hours). These are paid-plan features. They are not needed for the database check to work; they only end long-lived sessions sooner.
+4. Optional, depending on the plan: **time-box user sessions** (for example 24 hours) and an **inactivity timeout** (for example 8 hours). These are paid-plan features and are not needed for the database check. Supabase Auth enforces them when the website refreshes its token, so a session that runs out loses admin access at the next refresh, within 15 minutes, not on the exact second. (The session's own end time, `not_after`, is only set for SSO sign-ins; the database check honours it when it is set.)
 5. Save.
 6. Go to **Authentication** → **Sign In / Providers** and confirm that "Allow new users to sign up" is still **off** (section 1) and that anonymous sign-ins are **off**.
 
-To check that the database can see sessions, run this in **SQL Editor** after the migrations are pushed. Expected: `true`.
+The session migration (`20261122000009_session_bound_admin.sql`) checks before it changes anything that the `postgres` role can read `auth.sessions` and bypasses row level security. If either is missing, `supabase db push` stops with an error naming the role and nothing is changed; the site keeps working with the previous check. Do not work around that error: without that access `is_admin()` would raise an error inside every public read policy and break the public site.
+
+To check by hand after the migrations are pushed, run these in **SQL Editor**. Expected: `true` for both.
 
 ```sql
 select has_table_privilege('postgres', 'auth.sessions', 'select');
+select rolbypassrls from pg_roles where rolname = 'postgres';
 ```
 
 To sign an admin out of every device at once (for example after a lost laptop), run in **SQL Editor**, replacing `<email>`. Their admin access ends on the next request:

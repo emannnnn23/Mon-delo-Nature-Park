@@ -97,7 +97,8 @@ $$;
 
 -- Acts as the given user with a live session: reuses the user's newest live
 -- auth.sessions row or creates one, then sets the claims (see
--- authenticate_as_session). Call it as the privileged test user.
+-- authenticate_as_session). Call tests.reset_role() first: it reads and
+-- writes auth.sessions, which only the privileged test user (postgres) can.
 create or replace function tests.authenticate_as(uid uuid)
 returns void
 language plpgsql

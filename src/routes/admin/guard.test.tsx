@@ -374,9 +374,9 @@ describe("guarded admin shell", () => {
       const nav = await screen.findByRole("navigation", { name: "Admin" });
       const expected: [string, string][] = [
         ["Dashboard", "/admin"],
-        ["Homepage", "/admin/homepage"],
-        ["About", "/admin/about"],
-        ["Visit page", "/admin/visit"],
+        ["Homepage", "/admin/pages/home"],
+        ["About", "/admin/pages/about"],
+        ["Visit page", "/admin/pages/visit"],
         ["Attractions", "/admin/attractions"],
         ["Gallery", "/admin/gallery"],
         ["Testimonials", "/admin/testimonials"],

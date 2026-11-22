@@ -29,6 +29,7 @@ describe("src/routes.ts", () => {
     expect(adminLayout?.path).toBeUndefined();
     expect(paths(adminLayout?.children ?? [])).toEqual([
       "admin",
+      "admin/pages/:page",
       "admin/media",
       "admin/*",
     ]);

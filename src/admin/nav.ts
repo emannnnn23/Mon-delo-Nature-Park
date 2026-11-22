@@ -26,9 +26,9 @@ export type AdminNavItem = {
  */
 export const ADMIN_NAV: AdminNavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/homepage", label: "Homepage", icon: House },
-  { to: "/admin/about", label: "About", icon: Info },
-  { to: "/admin/visit", label: "Visit page", icon: MapPin },
+  { to: "/admin/pages/home", label: "Homepage", icon: House },
+  { to: "/admin/pages/about", label: "About", icon: Info },
+  { to: "/admin/pages/visit", label: "Visit page", icon: MapPin },
   { to: "/admin/attractions", label: "Attractions", icon: Compass },
   { to: "/admin/gallery", label: "Gallery", icon: Images },
   { to: "/admin/testimonials", label: "Testimonials", icon: Quote },

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
-import { useFormDraft } from "./useFormDraft";
+import { clearAllDrafts, useFormDraft } from "./useFormDraft";
 
 type Values = { title: string };
 
@@ -136,5 +136,27 @@ describe("useFormDraft", () => {
       setItem.mockRestore();
       removeItem.mockRestore();
     }
+  });
+});
+
+describe("clearAllDrafts", () => {
+  afterEach(() => sessionStorage.clear());
+
+  it("removes only keys with the draft prefix", () => {
+    sessionStorage.setItem("mondelos-admin-draft:a", "1");
+    sessionStorage.setItem("mondelos-admin-draft:b:2", "2");
+    sessionStorage.setItem("other", "3");
+    clearAllDrafts();
+    expect(sessionStorage.length).toBe(1);
+    expect(sessionStorage.getItem("other")).toBe("3");
+  });
+
+  it("does not throw when storage is unavailable", () => {
+    const spy = vi.spyOn(Storage.prototype, "key").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    sessionStorage.setItem("mondelos-admin-draft:a", "1");
+    expect(() => clearAllDrafts()).not.toThrow();
+    spy.mockRestore();
   });
 });

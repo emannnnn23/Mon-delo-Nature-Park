@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 
+import { withUnsavedGuardSuspended } from "~/admin/hooks/useUnsavedChanges";
 import { subscribeToSignOut } from "~/services/auth";
 
 /**
@@ -22,8 +23,12 @@ export function useSession(): void {
     () =>
       subscribeToSignOut(() => {
         const next = encodeURIComponent(pathRef.current);
-        navigate(`/admin/login?reason=expired&next=${next}`, {
-          replace: true,
+        // The session is already gone, so a form's "Leave without saving?"
+        // prompt must not hold this redirect (its draft is kept regardless).
+        void withUnsavedGuardSuspended(async () => {
+          await navigate(`/admin/login?reason=expired&next=${next}`, {
+            replace: true,
+          });
         });
       }),
     [navigate],

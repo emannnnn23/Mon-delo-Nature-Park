@@ -29,6 +29,24 @@ function removeDraft(storageKey: string): void {
   }
 }
 
+/**
+ * Removes every saved form draft (and nothing else) from `sessionStorage`.
+ * For an explicit, confirmed sign-out: the next person at this browser must
+ * not find half-typed content. A session that merely expired keeps them.
+ */
+export function clearAllDrafts(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key !== null && key.startsWith(PREFIX)) keys.push(key);
+    }
+    for (const key of keys) sessionStorage.removeItem(key);
+  } catch {
+    // No storage: there is nothing to clear.
+  }
+}
+
 function serialize(values: unknown): string | null {
   try {
     return JSON.stringify(values);

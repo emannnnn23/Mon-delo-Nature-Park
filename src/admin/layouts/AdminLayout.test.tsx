@@ -117,3 +117,46 @@ describe("AdminLayout sign-out with unsaved changes", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("AdminLayout sign-out and saved drafts", () => {
+  const DRAFT = "mondelos-admin-draft:attraction:1";
+  const OTHER = "unrelated-key";
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    sessionStorage.setItem(DRAFT, '{"name":"x"}');
+    sessionStorage.setItem("mondelos-admin-draft:faq:2", '{"q":"y"}');
+    sessionStorage.setItem(OTHER, "keep");
+  });
+
+  afterEach(() => sessionStorage.clear());
+
+  it("removes every saved draft (and only drafts) on a confirmed sign-out", async () => {
+    renderLayout();
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Sign out" })[0],
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Sign out without saving?",
+    });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Sign out" }),
+    );
+    await screen.findByRole("heading", { name: "Login page" });
+    expect(sessionStorage.getItem(DRAFT)).toBeNull();
+    expect(sessionStorage.getItem("mondelos-admin-draft:faq:2")).toBeNull();
+    expect(sessionStorage.getItem(OTHER)).toBe("keep");
+  });
+
+  it("keeps the drafts when the owner stays", async () => {
+    renderLayout();
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Sign out" })[0],
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Sign out without saving?",
+    });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Stay" }));
+    expect(sessionStorage.getItem(DRAFT)).not.toBeNull();
+  });
+});

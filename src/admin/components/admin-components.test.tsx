@@ -345,6 +345,30 @@ describe("Toast", () => {
     expect(screen.queryByText("Saved.")).not.toBeInTheDocument();
     expect(screen.getByText("Could not save.")).toBeInTheDocument();
   });
+
+  it("announces a warning politely and keeps it until dismissed", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    function Warn() {
+      const toast = useToast();
+      return (
+        <button type="button" onClick={() => toast.warning("Check storage.")}>
+          warn
+        </button>
+      );
+    }
+    render(
+      <>
+        <Warn />
+        <Toast />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "warn" }));
+    act(() => {
+      vi.advanceTimersByTime(6000);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Check storage.");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("Check storage.");
+  });
 });
 
 describe("CrudList", () => {

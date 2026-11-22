@@ -27,7 +27,11 @@ describe("src/routes.ts", () => {
   it("puts the admin routes in their own guarded layout", () => {
     expect(adminLayout).toBeDefined();
     expect(adminLayout?.path).toBeUndefined();
-    expect(paths(adminLayout?.children ?? [])).toEqual(["admin", "admin/*"]);
+    expect(paths(adminLayout?.children ?? [])).toEqual([
+      "admin",
+      "admin/media",
+      "admin/*",
+    ]);
   });
 
   it("puts the login page outside the guarded layout and the public one", () => {

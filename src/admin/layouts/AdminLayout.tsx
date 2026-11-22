@@ -4,6 +4,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
 import { Logo } from "~/components/common/Logo";
 import { useFocusTrap } from "~/hooks/useFocusTrap";
+import { clearAllDrafts } from "~/hooks/useFormDraft";
 import { useSession } from "~/hooks/useSession";
 import { signOut } from "~/services/auth";
 
@@ -160,6 +161,9 @@ export function AdminLayout({ email }: AdminLayoutProps) {
       await signOut();
       await navigate("/admin/login", { replace: true });
     });
+    // An explicit sign-out: nothing typed here may be left for the next
+    // person at this browser. (A session that merely expires keeps drafts.)
+    clearAllDrafts();
   }
 
   // Signing out ends the session at once, so a form with unsaved changes has

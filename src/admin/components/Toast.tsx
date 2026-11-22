@@ -1,7 +1,7 @@
-import { CircleAlert, CircleCheck, X } from "lucide-react";
+import { CircleAlert, CircleCheck, TriangleAlert, X } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
 
-type ToastKind = "success" | "error";
+type ToastKind = "success" | "warning" | "error";
 type ToastItem = { id: number; kind: ToastKind; message: string };
 
 const SUCCESS_MS = 5000;
@@ -39,8 +39,8 @@ function dismiss(id: number) {
 function show(kind: ToastKind, message: string) {
   const id = nextId++;
   toasts = [...toasts, { id, kind, message }];
-  // Successes fade on their own. Errors stay until dismissed: the owner has
-  // to read them and may need to act.
+  // Successes fade on their own. Warnings and errors stay until dismissed: the
+  // owner has to read them and may need to act.
   if (kind === "success")
     timers.set(
       id,
@@ -62,6 +62,7 @@ export function useToast() {
   return useMemo(
     () => ({
       success: (message: string) => show("success", message),
+      warning: (message: string) => show("warning", message),
       error: (message: string) => show("error", message),
       dismiss,
     }),
@@ -71,16 +72,27 @@ export function useToast() {
 
 function ToastCard({ toast }: { toast: ToastItem }) {
   const isError = toast.kind === "error";
-  const Icon = isError ? CircleAlert : CircleCheck;
+  const isWarning = toast.kind === "warning";
+  const Icon = isError ? CircleAlert : isWarning ? TriangleAlert : CircleCheck;
   return (
     <div
       className={`pointer-events-auto flex animate-fade-in items-start gap-3 rounded-xl border bg-white p-3 pl-4 shadow-lg motion-reduce:animate-none ${
-        isError ? "border-red-700" : "border-forest-800"
+        isError
+          ? "border-red-700"
+          : isWarning
+            ? "border-earth-700"
+            : "border-forest-800"
       }`}
     >
       <Icon
         aria-hidden="true"
-        className={`mt-2.5 size-5 shrink-0 ${isError ? "text-red-700" : "text-forest-800"}`}
+        className={`mt-2.5 size-5 shrink-0 ${
+          isError
+            ? "text-red-700"
+            : isWarning
+              ? "text-earth-700"
+              : "text-forest-800"
+        }`}
       />
       <p className="flex-1 py-2.5 text-sm font-semibold text-ink-900">
         {toast.message}
@@ -99,8 +111,8 @@ function ToastCard({ toast }: { toast: ToastItem }) {
 
 /**
  * Renders the current toasts. Mount it once (in the admin layout). Two live
- * regions stay mounted so screen readers announce what is added: successes
- * politely (`status`), errors assertively (`alert`).
+ * regions stay mounted so screen readers announce what is added:
+ * successes and warnings politely (`status`), errors assertively (`alert`).
  */
 export function Toast() {
   const items = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
@@ -108,7 +120,7 @@ export function Toast() {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] flex flex-col items-center gap-3 p-4">
       <div role="status" className="flex w-full max-w-md flex-col gap-3">
         {items
-          .filter((t) => t.kind === "success")
+          .filter((t) => t.kind !== "error")
           .map((t) => (
             <ToastCard key={t.id} toast={t} />
           ))}

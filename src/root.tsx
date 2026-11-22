@@ -1,5 +1,6 @@
 import {
   isRouteErrorResponse,
+  Link,
   Links,
   Meta,
   Outlet,
@@ -12,15 +13,22 @@ import "@fontsource/playfair-display/latin-400.css";
 import "@fontsource/playfair-display/latin-400-italic.css";
 import "@fontsource/playfair-display/latin-600.css";
 import "@fontsource/playfair-display/latin-700.css";
-import playfair600Latin from "@fontsource/playfair-display/files/playfair-display-latin-600-normal.woff2?url";
+import playfair700Latin from "@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff2?url";
 
+import { Logo } from "./components/common/Logo";
+import { ErrorContent } from "./pages/ErrorPage";
+import { NotFoundContent } from "./pages/NotFoundPage";
 import type { Route } from "./+types/root";
 import "./app.css";
 
+/**
+ * Preload only the face the hero heading paints with: Playfair 700 (the
+ * heading is `font-bold`). The 600 face, used by the logo, loads on demand.
+ */
 export const links: Route.LinksFunction = () => [
   {
     rel: "preload",
-    href: playfair600Latin,
+    href: playfair700Latin,
     as: "font",
     type: "font/woff2",
     crossOrigin: "anonymous",
@@ -49,31 +57,33 @@ export default function App() {
   return <Outlet />;
 }
 
+/**
+ * Last-resort boundary, outside the public layout (no header or footer data),
+ * so it brings its own main landmark and a logo link home. It shares the look
+ * of the in-layout 404 and error screens.
+ */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
-  let stack: string | undefined;
-
-  if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || details;
-  } else if (import.meta.env.DEV && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
-  }
+  const notFound = isRouteErrorResponse(error) && error.status === 404;
+  const stack =
+    import.meta.env.DEV && error instanceof Error ? error.stack : undefined;
 
   return (
-    <main className="container mx-auto p-4 pt-16">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full overflow-x-auto p-4">
+    <main id="main" className="flex min-h-screen flex-col bg-ivory-50">
+      <div className="mx-auto w-full max-w-7xl px-5 pt-6 sm:px-8">
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center rounded-sm"
+          aria-label="Mondelos Nature Park home"
+        >
+          <Logo />
+        </Link>
+      </div>
+      {notFound ? <NotFoundContent /> : <ErrorContent />}
+      {stack ? (
+        <pre className="mx-auto mb-10 w-full max-w-4xl overflow-x-auto px-5 text-xs text-ink-600 sm:px-8">
           <code>{stack}</code>
         </pre>
-      )}
+      ) : null}
     </main>
   );
 }

@@ -19,6 +19,21 @@ Everything in [README → Global Constraints](README.md#global-constraints-apply
 - **Developer-only steps** are marked **[Developer]**. The agent writes the instructions and waits; it never asks for a token, password or hook URL in chat.
 - **Dashboard labels change over time.** Confirm the current label at the time, and update the click path in `docs/admin-setup.md` if it differs.
 
+## Carried from Phase 2 (binding)
+- **Content Security Policy.** Components use inline `style` attributes: `objectPosition`, animation delays, gallery `aspectRatio` and the star widths. The CSP must allow style attributes, either through `style-src-attr 'unsafe-inline'` or as part of the planned `style-src 'unsafe-inline'`.
+- **Accessibility polish.**
+  - One error summary instead of `role="alert"` on every field.
+  - A pause/play control on the testimonial slider (WCAG 2.2.2).
+  - `inert` on the background while a dialog is open.
+  - Move focus to `main` or the `h1` after a route change.
+  - A visible hint that image buttons open the photo viewer.
+  - A clearer skip-link focus ring on the forest header.
+  - Tests for `overHero` and the `data-surface` attributes.
+  - Check list semantics in Safari.
+- **Design tokens.** Replace the remaining hard-coded hex colours (`AttractionCard` and `ExperienceCard` `#fdfbf6`, `MapsCard`, `Logo`, `LeafDecor`) and the red error utilities with `card` and `error` tokens.
+- **Performance.** Consider `zod/mini`: the visit chunk is about 89 KB minified. Skip the `useInView` observer when reduced motion is on.
+- **Screenshot size.** `docs/superpowers/notes/phase-2-screenshots` adds about 8.6 MB. Decide whether to keep these in git.
+
 ## Review Focus
 1. **A first-time visitor on a slow 4G phone** must see the hero heading quickly (LCP under 2.5 s on Lighthouse mobile), and the page must not jump as images load (CLS under 0.1). → Task 3 measures it.
 2. **A deep link shared on Facebook to `/discover/<slug>`** must show that attraction's title and image in the preview. → Task 5 checks it with the Facebook Sharing Debugger.

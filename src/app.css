@@ -14,6 +14,75 @@
   --color-ink-900: #262923;
   --color-ink-600: #66675f;
   --color-ink-500: #77786f;
+
+  --animate-menu-in: menu-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+
+  @keyframes menu-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  --animate-fade-in: fade-in 0.2s ease-out both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  --animate-rise: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Transform-only entrance: no opacity, so the element can be the LCP. */
+  --animate-rise-up: rise-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise-up {
+    from {
+      transform: translateY(18px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  --animate-scroll-cue: scroll-cue 1.8s ease-in-out infinite;
+
+  @keyframes scroll-cue {
+    0%,
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    60% {
+      opacity: 0;
+      transform: translateY(7px);
+    }
+  }
+}
+
+/* Swipe rows: the peeking next card already signals that the row scrolls. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {

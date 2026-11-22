@@ -75,6 +75,15 @@ describe("admin layout clientLoader (the guard)", () => {
     );
   });
 
+  it("returns an unavailable marker, without signing out, when the check failed", async () => {
+    vi.mocked(getAdminStatus).mockResolvedValue("unavailable");
+    expect(await layoutLoader(args("/admin/attractions"))).toEqual({
+      unavailable: true,
+    });
+    expect(signOut).not.toHaveBeenCalled();
+    expect(getSessionEmail).not.toHaveBeenCalled();
+  });
+
   it("lets an admin through with their email", async () => {
     vi.mocked(getAdminStatus).mockResolvedValue("admin");
     expect(await layoutLoader(args("/admin"))).toEqual({
@@ -224,6 +233,48 @@ describe("guarded admin shell", () => {
       await screen.findByText("Login page at /admin/login?reason=not-admin"),
     ).toBeInTheDocument();
     expect(signOut).toHaveBeenCalled();
+  });
+
+  describe("when the admin check cannot be completed", () => {
+    it("shows a retry screen, no admin content, and no sign-out", async () => {
+      vi.mocked(getAdminStatus).mockResolvedValue("unavailable");
+      renderAdmin("/admin");
+      expect(
+        await screen.findByText(
+          "Can’t reach the server. Check your connection and try again.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+      expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+      expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
+      expect(signOut).not.toHaveBeenCalled();
+    });
+
+    it("Retry checks again and shows the dashboard once it works", async () => {
+      const user = userEvent.setup();
+      vi.mocked(getAdminStatus)
+        .mockResolvedValueOnce("unavailable")
+        .mockResolvedValue("admin");
+      renderAdmin("/admin");
+      await user.click(await screen.findByRole("button", { name: "Retry" }));
+      expect(
+        await screen.findByRole("heading", { level: 1, name: "Dashboard" }),
+      ).toBeInTheDocument();
+      expect(signOut).not.toHaveBeenCalled();
+    });
+
+    it("Retry goes on to the login page if the session turns out to be gone", async () => {
+      const user = userEvent.setup();
+      vi.mocked(getAdminStatus)
+        .mockResolvedValueOnce("unavailable")
+        .mockResolvedValue("anonymous");
+      renderAdmin("/admin");
+      await user.click(await screen.findByRole("button", { name: "Retry" }));
+      expect(
+        await screen.findByText("Login page at /admin/login?next=%2Fadmin"),
+      ).toBeInTheDocument();
+    });
   });
 
   describe("as an admin", () => {

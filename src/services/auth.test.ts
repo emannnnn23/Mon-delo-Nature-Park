@@ -137,9 +137,10 @@ describe("getAdminStatus", () => {
     expect(client.rpc).not.toHaveBeenCalled();
   });
 
-  it("is anonymous when reading the session fails", async () => {
-    fakeClient({ sessionError: new Error("bad") });
-    expect(await getAdminStatus()).toBe("anonymous");
+  it("is unavailable when reading the session fails", async () => {
+    const { client } = fakeClient({ sessionError: new Error("bad") });
+    expect(await getAdminStatus()).toBe("unavailable");
+    expect(client.rpc).not.toHaveBeenCalled();
   });
 
   it("is not-admin when is_admin is false", async () => {
@@ -156,25 +157,28 @@ describe("getAdminStatus", () => {
     expect(await getAdminStatus()).toBe("admin");
   });
 
-  it("fails closed when the is_admin call returns an error", async () => {
+  // A failed check is not an answer: never admin, but never a sign-out either.
+  it("is unavailable when the is_admin call returns an error", async () => {
     fakeClient({
       session: { user: { email: "a@b.co" } },
       isAdmin: { data: true, error: { message: "boom" } },
     });
-    expect(await getAdminStatus()).toBe("not-admin");
+    expect(await getAdminStatus()).toBe("unavailable");
   });
 
-  it("fails closed when the is_admin call throws", async () => {
+  it("is unavailable when the is_admin call throws", async () => {
     fakeClient({ session: { user: {} }, rpcThrows: true });
-    expect(await getAdminStatus()).toBe("not-admin");
+    expect(await getAdminStatus()).toBe("unavailable");
   });
 
-  it("fails closed on anything but exactly true", async () => {
+  it("is unavailable, never admin, on anything but a boolean", async () => {
     fakeClient({
       session: { user: {} },
       isAdmin: { data: "true", error: null },
     });
-    expect(await getAdminStatus()).toBe("not-admin");
+    expect(await getAdminStatus()).toBe("unavailable");
+    fakeClient({ session: { user: {} }, isAdmin: { data: null, error: null } });
+    expect(await getAdminStatus()).toBe("unavailable");
   });
 });
 

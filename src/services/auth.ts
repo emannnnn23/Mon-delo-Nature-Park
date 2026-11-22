@@ -1,7 +1,7 @@
 import { getSupabase } from "~/lib/supabase";
 
 export type SignInResult = { ok: true } | { ok: false; message: string };
-export type AdminStatus = "anonymous" | "not-admin" | "admin";
+export type AdminStatus = "anonymous" | "not-admin" | "admin" | "unavailable";
 
 const NOT_CONFIGURED = "The admin isn't configured on this site yet.";
 
@@ -94,20 +94,25 @@ export async function getSessionEmail(): Promise<string | null> {
 
 /**
  * Who is asking. `anonymous` means no session; `admin` only when the database
- * itself confirms it through `is_admin()`. Any failure of that check counts as
- * `not-admin` (fail closed). This is a convenience gate for the UI: row level
- * security is what actually protects the data.
+ * itself answers `true` from `is_admin()`, and `not-admin` only when it answers
+ * `false`. If the check cannot be completed (network or server error, an odd
+ * answer) the result is `unavailable`: never admin, but not a reason to sign
+ * anyone out. This is a convenience gate for the UI: row level security is
+ * what actually protects the data.
  */
 export async function getAdminStatus(): Promise<AdminStatus> {
   const supabase = getSupabase();
   if (!supabase) return "anonymous";
   try {
     const { data, error } = await supabase.auth.getSession();
-    if (error || !data.session) return "anonymous";
+    if (error) return "unavailable";
+    if (!data.session) return "anonymous";
     const result = await supabase.rpc("is_admin");
-    if (result.error) return "not-admin";
-    return result.data === true ? "admin" : "not-admin";
+    if (result.error) return "unavailable";
+    if (result.data === true) return "admin";
+    if (result.data === false) return "not-admin";
+    return "unavailable";
   } catch {
-    return "not-admin";
+    return "unavailable";
   }
 }

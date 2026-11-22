@@ -501,11 +501,19 @@ describe("login with the real route and guard", () => {
     vi.mocked(signIn).mockResolvedValue({ ok: true });
 
     renderAdmin("/admin/login", { realLogin: true });
+    // The status region is there, empty, before any message.
+    const status = await screen.findByRole("status");
+    expect(status).toBeEmptyDOMElement();
     await user.type(await screen.findByLabelText("Email"), "a@b.co");
     await user.type(screen.getByLabelText("Password"), "secret-pw");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByText(/doesn.t have access/i)).toBeInTheDocument();
+    // The same live region receives the notice (not a new one that appears
+    // with its text, which screen readers can miss).
+    expect(status.isConnected).toBe(true);
+    expect(screen.getByRole("status")).toBe(status);
+    expect(status).toHaveTextContent(/doesn.t have access/i);
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled(),
     );

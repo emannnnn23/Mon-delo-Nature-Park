@@ -76,8 +76,15 @@ describe("LoginPage", () => {
   it("keeps one live region for notices, present even when empty", async () => {
     renderAt("/admin/login");
     const status = await screen.findByRole("status");
+    const alert = screen.getByRole("alert");
     expect(status).toBeEmptyDOMElement();
-    expect(screen.getByRole("alert")).toBeEmptyDOMElement();
+    expect(alert).toBeEmptyDOMElement();
+    // display:none would take them out of the accessibility tree, and a
+    // message added later would not be announced. Spacing sits on the content.
+    for (const region of [status, alert]) {
+      expect(region.className).not.toMatch(/hidden/);
+      expect(region.className).not.toMatch(/\bm[tby]?-\d/);
+    }
   });
 
   it("says the admin is not configured, and offers no form", async () => {

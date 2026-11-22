@@ -87,10 +87,12 @@ export function LoginPage({ configured }: LoginPageProps) {
 
         {/* Live regions stay mounted and are filled on change, so screen
             readers announce the text; one that appears with its content is
-            often missed. */}
-        <div role="status" className="mt-6 empty:hidden">
+            often missed. They must not be display:none when empty (that drops
+            them from the accessibility tree), so they have no spacing of their
+            own: it sits on the message inside. */}
+        <div role="status">
           {notice ? (
-            <p className="rounded-lg bg-cream-100 px-4 py-3 text-sm text-ink-900">
+            <p className="mt-6 rounded-lg bg-cream-100 px-4 py-3 text-sm text-ink-900">
               {notice}
             </p>
           ) : null}
@@ -139,9 +141,9 @@ export function LoginPage({ configured }: LoginPageProps) {
               ref={errorRef}
               role="alert"
               tabIndex={-1}
-              className="mt-4 rounded-sm text-sm font-semibold text-red-700 empty:hidden"
+              className="rounded-sm text-sm font-semibold text-red-700"
             >
-              {error?.message}
+              {error ? <p className="mt-4">{error.message}</p> : null}
             </div>
             <Button type="submit" disabled={pending} className="mt-7 w-full">
               {pending ? "Signing in…" : "Sign in"}

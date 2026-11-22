@@ -67,12 +67,13 @@ Set these in the Supabase Dashboard for the project. Labels move between release
 5. Save.
 6. Go to **Authentication** → **Sign In / Providers** and confirm that "Allow new users to sign up" is still **off** (section 1) and that anonymous sign-ins are **off**.
 
-The session migration (`20261122000009_session_bound_admin.sql`) checks before it changes anything that the `postgres` role can read `auth.sessions` and bypasses row level security. If either is missing, `supabase db push` stops with an error naming the role and nothing is changed; the site keeps working with the previous check. Do not work around that error: without that access `is_admin()` would raise an error inside every public read policy and break the public site.
+The session migration (`20261122000009_session_bound_admin.sql`) checks before it changes anything that the `postgres` role can read `auth.sessions` and `auth.users` and bypasses row level security. If any of these is missing, `supabase db push` stops at that migration with an error naming the role: `is_admin()` is left unchanged and the site keeps working with the previous check (migrations listed before it in the same push may already be applied). Do not work around that error: without that access `is_admin()` would raise an error inside every public read policy and break the public site.
 
-To check by hand after the migrations are pushed, run these in **SQL Editor**. Expected: `true` for both.
+To check by hand after the migrations are pushed, run these in **SQL Editor**. Expected: `true` for all three.
 
 ```sql
 select has_table_privilege('postgres', 'auth.sessions', 'select');
+select has_table_privilege('postgres', 'auth.users', 'select');
 select rolbypassrls from pg_roles where rolname = 'postgres';
 ```
 

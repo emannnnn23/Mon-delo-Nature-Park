@@ -143,7 +143,7 @@ describe("PageSectionsPage", () => {
 
   it("uses plain words for the fields", async () => {
     renderPage();
-    const region = screen.getByRole("region", { name: /Top banner/ });
+    const region = await openSection("Welcome introduction");
     expect(
       within(region).getByLabelText(/Small heading above the title/),
     ).toBeInTheDocument();
@@ -189,8 +189,9 @@ describe("PageSectionsPage", () => {
 
   it("flags a button label without a link and does not save", async () => {
     renderPage();
-    const region = screen.getByRole("region", { name: /Top banner/ });
-    await userEvent.type(within(region).getByLabelText("Button label"), "Go");
+    const region = await openSection("Welcome introduction");
+    // The introduction has a label and a link: removing only the link.
+    await userEvent.clear(within(region).getByLabelText("Button link"));
     await userEvent.click(
       within(region).getByRole("button", { name: "Save changes" }),
     );
@@ -207,12 +208,10 @@ describe("PageSectionsPage", () => {
 
   it("rejects an unsafe button link", async () => {
     renderPage();
-    const region = screen.getByRole("region", { name: /Top banner/ });
-    await userEvent.type(within(region).getByLabelText("Button label"), "Go");
-    await userEvent.type(
-      within(region).getByLabelText("Button link"),
-      "javascript:alert(1)",
-    );
+    const region = await openSection("Welcome introduction");
+    const link = within(region).getByLabelText("Button link");
+    await userEvent.clear(link);
+    await userEvent.type(link, "javascript:alert(1)");
     await userEvent.click(
       within(region).getByRole("button", { name: "Save changes" }),
     );

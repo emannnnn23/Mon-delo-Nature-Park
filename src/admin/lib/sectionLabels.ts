@@ -1,5 +1,4 @@
-/** The pages whose sections the owner edits in the admin. */
-export type PageKey = "home" | "about" | "visit";
+import type { PageKey } from "~/types/content";
 
 export const PAGE_KEYS: readonly PageKey[] = ["home", "about", "visit"];
 
@@ -44,13 +43,50 @@ export const SECTION_LABELS: Record<PageKey, Record<string, string>> = {
   },
 };
 
+/** One editable part of a section. `button` is the label and link together. */
+export type SectionField = "eyebrow" | "heading" | "body" | "button" | "photo";
+
 /**
- * Which kind of photo a section's image is. The big banner and introduction
- * photos are shown large, so they must be at least 800 px (`cover`); the rest
- * are shown smaller (`gallery`).
+ * The fields the public site actually shows for each section, so the owner is
+ * only offered what has an effect. Other columns are never touched on save.
  */
-export function imagePurposeFor(key: string): "cover" | "gallery" {
-  return key === "hero" || key === "intro" ? "cover" : "gallery";
+export const SECTION_FIELDS: Record<PageKey, Record<string, SectionField[]>> = {
+  home: {
+    hero: ["heading", "body", "photo"],
+    intro: ["eyebrow", "heading", "body", "button"],
+    discover: ["heading", "body"],
+    gallery: ["heading", "body"],
+    testimonials: ["heading"],
+    visit: ["heading", "body"],
+  },
+  about: {
+    intro: ["heading", "body"],
+    story: ["eyebrow", "heading", "body", "photo"],
+    mission: ["eyebrow", "heading", "body", "photo"],
+    vision: ["eyebrow", "heading", "body", "photo"],
+    surroundings: ["eyebrow", "heading", "body", "photo"],
+  },
+  visit: {
+    intro: ["heading", "body"],
+    getting_here: ["heading", "body"],
+  },
+};
+
+/** The offered fields of a section, or null when the site does not use it. */
+export function fieldsFor(page: PageKey, key: string): SectionField[] | null {
+  return SECTION_FIELDS[page][key] ?? null;
+}
+
+/**
+ * Which kind of photo a section's image is. Only the home banner is shown
+ * large, so its photo must be at least 800 px (`cover`); the about section
+ * photos are shown smaller (`gallery`).
+ */
+export function imagePurposeFor(
+  page: PageKey,
+  key: string,
+): "cover" | "gallery" {
+  return page === "home" && key === "hero" ? "cover" : "gallery";
 }
 
 /** A readable name for a section: the known label, or the key tidied up. */

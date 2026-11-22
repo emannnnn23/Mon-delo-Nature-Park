@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SectionEditor } from "~/admin/components/SectionEditor";
 import { useToast } from "~/admin/components/Toast";
@@ -6,13 +6,14 @@ import { useUnsavedChanges } from "~/admin/hooks/useUnsavedChanges";
 import {
   PAGE_TITLES,
   SECTION_LABELS,
+  fieldsFor,
   imagePurposeFor,
   sectionLabel,
-  type PageKey,
 } from "~/admin/lib/sectionLabels";
 import { Button } from "~/components/common/Button";
 import { insertRow, nextSortOrder } from "~/services/admin/crud";
 import { toFriendlyError } from "~/services/admin/errors";
+import type { PageKey } from "~/types/content";
 import type { MediaRow, Row } from "~/types/db-helpers";
 
 type SectionRow = Row<"page_sections">;
@@ -35,7 +36,16 @@ export function PageSectionsPage({ page, rows, media }: PageSectionsPageProps) {
   const [current, setCurrent] = useState(rows);
   const [adding, setAdding] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [firstNew, setFirstNew] = useState<string | null>(null);
+  // Sections opened so far (the first one to begin with, and any just added),
+  // so adding a section never collapses the ones already open.
+  const [openedIds, setOpenedIds] = useState<ReadonlySet<string>>(() => {
+    // The first section the website uses, in page order.
+    const first = Object.keys(SECTION_LABELS[page])
+      .map((key) => rows.find((r) => r.key === key))
+      .find(Boolean);
+    return new Set(first ? [first.id] : []);
+  });
+  const messageRef = useRef<HTMLParagraphElement>(null);
   const [dirtyIds, setDirtyIds] = useState<ReadonlySet<string>>(new Set());
 
   // One leave prompt for the whole page (a router allows one blocker). Each
@@ -63,6 +73,11 @@ export function PageSectionsPage({ page, rows, media }: PageSectionsPageProps) {
   );
   const title = PAGE_TITLES[page];
 
+  // A failure message takes focus so keyboard users do not miss it.
+  useEffect(() => {
+    if (message) messageRef.current?.focus();
+  }, [message]);
+
   async function handleAdd(key: string) {
     setAdding(key);
     setMessage(null);
@@ -76,12 +91,17 @@ export function PageSectionsPage({ page, rows, media }: PageSectionsPageProps) {
         is_sample: false,
       });
       setCurrent((cur) => [...cur, created]);
-      setFirstNew(created.id);
+      setOpenedIds((cur) => new Set(cur).add(created.id));
       toast.success(
         `${sectionLabel(page, key)} added. It is hidden until you publish it.`,
       );
     } catch (e) {
-      setMessage(toFriendlyError(e, { entity: "section" }).friendly);
+      const friendly = toFriendlyError(e, { entity: "section" });
+      setMessage(
+        friendly.code === "23505"
+          ? "That section was already added — reload the page to see it."
+          : friendly.friendly,
+      );
     } finally {
       setAdding(null);
     }
@@ -102,14 +122,15 @@ export function PageSectionsPage({ page, rows, media }: PageSectionsPageProps) {
       </p>
 
       <div className="mt-8 flex flex-col gap-4">
-        {[...known, ...others].map((row, index) => (
+        {[...known, ...others].map((row) => (
           <SectionEditor
             key={row.id}
             row={row}
             label={sectionLabel(page, row.key)}
             media={media}
-            imagePurpose={imagePurposeFor(row.key)}
-            defaultOpen={index === 0 || row.id === firstNew}
+            imagePurpose={imagePurposeFor(page, row.key)}
+            fields={fieldsFor(page, row.key)}
+            defaultOpen={openedIds.has(row.id)}
             onDirtyChange={handleDirtyChange}
           />
         ))}
@@ -128,7 +149,12 @@ export function PageSectionsPage({ page, rows, media }: PageSectionsPageProps) {
             editing it. It stays hidden until you publish it.
           </p>
           {message ? (
-            <p role="alert" className="mt-3 font-semibold text-red-700">
+            <p
+              ref={messageRef}
+              tabIndex={-1}
+              role="alert"
+              className="mt-3 font-semibold text-red-700 focus:outline-none"
+            >
               {message}
             </p>
           ) : null}

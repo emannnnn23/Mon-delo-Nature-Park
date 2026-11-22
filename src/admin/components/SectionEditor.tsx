@@ -18,6 +18,7 @@ import { useFormDraft } from "~/hooks/useFormDraft";
 import { pageSectionSchema } from "~/lib/validation/pageSection";
 import { markConfirmed, updateRow } from "~/services/admin/crud";
 import { toFriendlyError } from "~/services/admin/errors";
+import type { SectionField } from "~/admin/lib/sectionLabels";
 import type { MediaRow, Row } from "~/types/db-helpers";
 
 type SectionRow = Row<"page_sections">;
@@ -57,6 +58,8 @@ type SectionEditorProps = {
   media: MediaRow[];
   /** `cover` photos must be at least 800 px (large banner photos). */
   imagePurpose: "cover" | "gallery";
+  /** The fields the website uses for this section; null when it uses none. */
+  fields: SectionField[] | null;
   defaultOpen?: boolean;
   /**
    * Called when this section gains or loses unsaved edits. A router allows one
@@ -75,6 +78,7 @@ export function SectionEditor({
   label,
   media,
   imagePurpose,
+  fields,
   defaultOpen = false,
   onDirtyChange,
 }: SectionEditorProps) {
@@ -94,6 +98,8 @@ export function SectionEditor({
   // Photos known to this editor: the library, plus any picked or uploaded here.
   const [library, setLibrary] = useState(media);
   const formRef = useRef<HTMLFormElement>(null);
+  const messageRef = useRef<HTMLParagraphElement>(null);
+  const offered = (field: SectionField) => fields?.includes(field) ?? false;
 
   const saved = useMemo(() => sectionFormValues(row), [row]);
   const isDirty = JSON.stringify(values) !== JSON.stringify(saved);
@@ -120,6 +126,11 @@ export function SectionEditor({
   }, [onDirtyChange, rowId, isDirty]);
 
   const open = chosen ?? (defaultOpen || restored);
+
+  // A failure message takes focus, so keyboard and screen reader users hear it.
+  useEffect(() => {
+    if (message) messageRef.current?.focus();
+  }, [message]);
 
   // After a failed check, move to the first field that needs attention.
   useEffect(() => {
@@ -151,17 +162,21 @@ export function SectionEditor({
       return;
     }
     setErrors({});
-    const fields = parsed.data;
     setBusy(true);
     try {
+      // Only the offered fields are sent: the others keep what is stored.
       const updated = await updateRow("page_sections", row.id, {
-        eyebrow: fields.eyebrow,
-        heading: fields.heading,
-        body: fields.body,
-        cta_label: fields.ctaLabel,
-        cta_href: fields.ctaHref,
-        media_id: values.mediaId,
         is_published: values.isPublished,
+        ...(offered("eyebrow") ? { eyebrow: parsed.data.eyebrow } : {}),
+        ...(offered("heading") ? { heading: parsed.data.heading } : {}),
+        ...(offered("body") ? { body: parsed.data.body } : {}),
+        ...(offered("button")
+          ? {
+              cta_label: parsed.data.ctaLabel,
+              cta_href: parsed.data.ctaHref,
+            }
+          : {}),
+        ...(offered("photo") ? { media_id: values.mediaId } : {}),
       });
       const next = sectionFormValues(updated);
       setRow(updated);
@@ -230,12 +245,21 @@ export function SectionEditor({
           </p>
         ) : null}
         {row.is_sample ? (
-          <div className="mb-5">
+          <div className="mb-5 flex flex-col gap-2">
             <SampleBadge
               onConfirm={() => void handleConfirm()}
               disabled={busy}
             />
+            <p className="max-w-xl text-sm text-ink-600">
+              After you&apos;ve checked this text, press Mark as confirmed to
+              remove the Sample label on the website.
+            </p>
           </div>
+        ) : null}
+        {fields === null ? (
+          <p className="mb-5 text-ink-600">
+            The website doesn&apos;t use this section.
+          </p>
         ) : null}
 
         <form
@@ -251,90 +275,105 @@ export function SectionEditor({
             }
           />
 
-          <FormField
-            label="Small heading above the title"
-            name="eyebrow"
-            error={errors.eyebrow}
-          >
-            <input
-              type="text"
-              value={values.eyebrow}
-              onChange={(e) => setText("eyebrow", e.target.value)}
-              className={CONTROL_CLASS}
-            />
-          </FormField>
-
-          <FormField label="Title" name="heading" error={errors.heading}>
-            <input
-              type="text"
-              value={values.heading}
-              onChange={(e) => setText("heading", e.target.value)}
-              className={CONTROL_CLASS}
-            />
-          </FormField>
-
-          <FormField label="Text" name="body" error={errors.body}>
-            <textarea
-              rows={6}
-              value={values.body}
-              onChange={(e) => setText("body", e.target.value)}
-              className={CONTROL_CLASS}
-            />
-          </FormField>
-
-          <div className="grid gap-5 sm:grid-cols-2">
+          {offered("eyebrow") ? (
             <FormField
-              label="Button label"
-              name="ctaLabel"
-              error={errors.ctaLabel}
+              label="Small heading above the title"
+              name="eyebrow"
+              error={errors.eyebrow}
             >
               <input
                 type="text"
-                value={values.ctaLabel}
-                onChange={(e) => setText("ctaLabel", e.target.value)}
+                value={values.eyebrow}
+                onChange={(e) => setText("eyebrow", e.target.value)}
                 className={CONTROL_CLASS}
               />
             </FormField>
-            <FormField
-              label="Button link"
-              name="ctaHref"
-              error={errors.ctaHref}
-              hint="A page on this site, like /visit, or a full address starting with https://"
-            >
+          ) : null}
+
+          {offered("heading") ? (
+            <FormField label="Title" name="heading" error={errors.heading}>
               <input
                 type="text"
-                value={values.ctaHref}
-                onChange={(e) => setText("ctaHref", e.target.value)}
+                value={values.heading}
+                onChange={(e) => setText("heading", e.target.value)}
                 className={CONTROL_CLASS}
               />
             </FormField>
-          </div>
+          ) : null}
 
-          <div role="group" aria-labelledby={`${uid}-photo`}>
-            <p
-              id={`${uid}-photo`}
-              className="mb-1.5 text-sm font-semibold text-ink-900"
-            >
-              Photo
-            </p>
-            <ImagePicker
-              value={photo}
-              purpose={imagePurpose}
-              clearable
-              onChange={(picked) => {
-                if (picked)
-                  setLibrary((cur) =>
-                    cur.some((m) => m.id === picked.id)
-                      ? cur
-                      : [...cur, picked],
-                  );
-                setValues((v) => ({ ...v, mediaId: picked?.id ?? null }));
-              }}
-            />
-          </div>
+          {offered("body") ? (
+            <FormField label="Text" name="body" error={errors.body}>
+              <textarea
+                rows={6}
+                value={values.body}
+                onChange={(e) => setText("body", e.target.value)}
+                className={CONTROL_CLASS}
+              />
+            </FormField>
+          ) : null}
+
+          {offered("button") ? (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField
+                label="Button label"
+                name="ctaLabel"
+                error={errors.ctaLabel}
+              >
+                <input
+                  type="text"
+                  value={values.ctaLabel}
+                  onChange={(e) => setText("ctaLabel", e.target.value)}
+                  className={CONTROL_CLASS}
+                />
+              </FormField>
+              <FormField
+                label="Button link"
+                name="ctaHref"
+                error={errors.ctaHref}
+                hint="A page on this site, like /visit, or a full address starting with https://"
+              >
+                <input
+                  type="text"
+                  value={values.ctaHref}
+                  onChange={(e) => setText("ctaHref", e.target.value)}
+                  className={CONTROL_CLASS}
+                />
+              </FormField>
+            </div>
+          ) : null}
+
+          {offered("photo") ? (
+            <div role="group" aria-labelledby={`${uid}-photo`}>
+              <p
+                id={`${uid}-photo`}
+                className="mb-1.5 text-sm font-semibold text-ink-900"
+              >
+                Photo
+              </p>
+              <ImagePicker
+                value={photo}
+                purpose={imagePurpose}
+                clearable
+                onChange={(picked) => {
+                  if (picked)
+                    setLibrary((cur) =>
+                      cur.some((m) => m.id === picked.id)
+                        ? cur
+                        : [...cur, picked],
+                    );
+                  setValues((v) => ({ ...v, mediaId: picked?.id ?? null }));
+                }}
+              />
+            </div>
+          ) : null}
 
           {message ? (
-            <p role="alert" className="font-semibold text-red-700">
+            <p
+              ref={messageRef}
+              tabIndex={-1}
+              role="alert"
+              className="font-semibold text-red-700 focus:outline-none"
+            >
               {message}
             </p>
           ) : null}

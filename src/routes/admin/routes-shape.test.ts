@@ -30,6 +30,8 @@ describe("src/routes.ts", () => {
     expect(paths(adminLayout?.children ?? [])).toEqual([
       "admin",
       "admin/pages/:page",
+      "admin/attractions",
+      "admin/attractions/:id",
       "admin/media",
       "admin/*",
     ]);

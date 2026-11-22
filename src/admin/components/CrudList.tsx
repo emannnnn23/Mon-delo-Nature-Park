@@ -32,6 +32,8 @@ type CrudListProps<T extends CrudItem> = {
   onReorder?: (item: T, direction: "up" | "down") => void;
   /** Called only after the owner confirms in the built-in dialog. */
   onDelete?: (item: T) => void;
+  /** Text of the delete confirmation. Defaults to "This can't be undone." */
+  deleteBody?: (item: T) => ReactNode;
   onTogglePublish?: (item: T, next: boolean) => void;
   /** Disables every control, e.g. while a save is running. */
   busy?: boolean;
@@ -55,6 +57,7 @@ export function CrudList<T extends CrudItem>({
   emptyText,
   onReorder,
   onDelete,
+  deleteBody,
   onTogglePublish,
   busy = false,
 }: CrudListProps<T>) {
@@ -231,7 +234,11 @@ export function CrudList<T extends CrudItem>({
       <ConfirmDialog
         open={pendingDelete !== null}
         title={`Delete “${pendingLabel}”?`}
-        body="This can't be undone."
+        body={
+          pendingDelete && deleteBody
+            ? deleteBody(pendingDelete)
+            : "This can't be undone."
+        }
         confirmLabel="Delete"
         destructive
         onCancel={() => setPendingDelete(null)}

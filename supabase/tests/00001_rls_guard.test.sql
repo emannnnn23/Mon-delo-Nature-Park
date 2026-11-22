@@ -1,5 +1,5 @@
 begin;
-select plan(12);
+select plan(13);
 
 -- Every ordinary or partitioned table in public, as pg_class rows.
 create temporary table guard_tables on commit drop as
@@ -108,15 +108,31 @@ select is(
 );
 
 -- Anonymous visitors never write directly; the contact RPC is the only path.
+-- has_table_privilege only sees table-level grants, so a column-level grant
+-- such as `grant update (col) on t to anon` would slip past it.
+-- has_any_column_privilege is true for a table-level grant too, and also for
+-- any single-column grant, so it covers both. (A positive probe cannot live in
+-- this plan without leaving a grant behind; the checks are verified by hand by
+-- granting a column privilege and seeing them fail.)
 select is(
   (
     select count(*)
     from guard_tables t
-    cross join unnest(array['INSERT', 'UPDATE', 'DELETE']) as priv
-    where has_table_privilege('anon', t.oid, priv)
+    cross join unnest(array['INSERT', 'UPDATE']) as priv
+    where has_any_column_privilege('anon', t.oid, priv)
   ),
   0::bigint,
-  'anon has no INSERT, UPDATE or DELETE on any public table'
+  'anon has no INSERT or UPDATE (table or column level) on any public table'
+);
+
+select is(
+  (
+    select count(*)
+    from guard_tables t
+    where has_table_privilege('anon', t.oid, 'DELETE')
+  ),
+  0::bigint,
+  'anon has no DELETE on any public table'
 );
 
 -- The fail-closed default privileges set by the base migration must exist:

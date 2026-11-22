@@ -23,7 +23,8 @@ type FormFieldProps = {
   optional?: boolean;
   /**
    * One control element (it receives `id`, `name`, `aria-describedby` and
-   * `aria-invalid`), or a function that spreads those onto a custom control.
+   * `aria-invalid`; an `id` or `aria-describedby` it already has is kept and
+   * merged), or a function that spreads those onto a custom control.
    */
   children: ReactElement | ((props: FieldControlProps) => ReactNode);
 };
@@ -46,12 +47,23 @@ export function FormField({
   children,
 }: FormFieldProps) {
   const uid = useId();
-  const id = `${uid}-${name}`;
+  const child = isValidElement(children)
+    ? (children as ReactElement<Record<string, unknown>>)
+    : null;
+  // A control that brings its own id or aria-describedby keeps it: the id is
+  // reused (so the label still points at it) and the descriptions are merged.
+  const ownId = typeof child?.props.id === "string" ? child.props.id : null;
+  const ownDescribedBy =
+    typeof child?.props["aria-describedby"] === "string"
+      ? child.props["aria-describedby"]
+      : null;
+  const id = ownId ?? `${uid}-${name}`;
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
   const describedBy =
-    [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ") ||
-    undefined;
+    [ownDescribedBy, hint ? hintId : null, error ? errorId : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
 
   const props: FieldControlProps = {
     id,
@@ -76,10 +88,8 @@ export function FormField({
       <div className="mt-1.5">
         {typeof children === "function"
           ? children(props)
-          : isValidElement(children)
-            ? cloneElement(children as ReactElement<Record<string, unknown>>, {
-                ...props,
-              })
+          : child
+            ? cloneElement(child, { ...props })
             : children}
       </div>
       {error ? (

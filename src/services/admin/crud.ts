@@ -52,6 +52,7 @@ interface Query extends PromiseLike<QueryResult> {
   eq(column: string, value: unknown): Query;
   is(column: string, value: null): Query;
   order(column: string, options?: { ascending: boolean }): Query;
+  limit(count: number): Query;
   maybeSingle(): Query;
   single(): Query;
 }
@@ -181,12 +182,19 @@ export async function deleteRow<T extends ContentTable>(
   if (!Array.isArray(data) || data.length === 0) throw noRowsError();
 }
 
-type OrderRef = { id: string; sort_order: number };
+type OrderRef = { id: string; sort_order: number; created_at?: string };
 
 /**
- * Swaps the `sort_order` of two rows with two updates. If the second fails the
- * first is put back (a best effort: if that also fails, the original error is
- * still the one thrown).
+ * Swaps the position of two rows. Normally that is two updates exchanging their
+ * `sort_order`; if the second fails the first is put back (a best effort: if
+ * that also fails, the original error is still the one thrown).
+ *
+ * Equal `sort_order` values cannot be exchanged (that changes nothing), so one
+ * row is moved just after the other with a single update. Lists break ties by
+ * `created_at`, so pass `created_at` on both refs (rows can be passed as they
+ * are) and the one that currently sorts first is the one that moves; without
+ * it `a` is assumed to be first. A third row already at `sort_order + 1` would
+ * still tie with the moved one: use `nextSortOrder` on insert to avoid ties.
  */
 export async function swapOrder<T extends SortableTable>(
   table: T,
@@ -194,6 +202,15 @@ export async function swapOrder<T extends SortableTable>(
   b: OrderRef,
 ): Promise<void> {
   const order = (sort_order: number) => ({ sort_order }) as Update<T>;
+  if (a.sort_order === b.sort_order) {
+    const aSortsFirst =
+      a.created_at === undefined ||
+      b.created_at === undefined ||
+      a.created_at <= b.created_at;
+    const mover = aSortsFirst ? a : b;
+    await updateRow(table, mover.id, order(mover.sort_order + 1));
+    return;
+  }
   await updateRow(table, a.id, order(b.sort_order));
   try {
     await updateRow(table, b.id, order(a.sort_order));
@@ -221,4 +238,26 @@ export async function markConfirmed<T extends SampleTable>(
   id: string,
 ): Promise<Row<T>> {
   return updateRow(table, id, { is_sample: false } as Update<T>);
+}
+
+/**
+ * The `sort_order` for a new row so it goes last: the highest existing value
+ * plus one (0 when there are none). Pass `filter` to scope it to a parent,
+ * e.g. `{ attraction_id }` for photos of one attraction.
+ */
+export async function nextSortOrder<T extends SortableTable>(
+  table: T,
+  filter?: Partial<Row<T>>,
+): Promise<number> {
+  let query = from(table).select("sort_order");
+  for (const [column, value] of Object.entries(filter ?? {})) {
+    if (value === undefined) continue;
+    query = value === null ? query.is(column, null) : query.eq(column, value);
+  }
+  const data = await run(
+    table,
+    query.order("sort_order", { ascending: false }).limit(1),
+  );
+  const top = Array.isArray(data) ? (data[0] as { sort_order?: number }) : null;
+  return typeof top?.sort_order === "number" ? top.sort_order + 1 : 0;
 }

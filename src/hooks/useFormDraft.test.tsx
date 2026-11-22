@@ -18,8 +18,20 @@ function Form({ initial = "" }: { initial?: string }) {
           onChange={(e) => setValues({ title: e.target.value })}
         />
       </label>
-      <button type="button" onClick={clear}>
+      <button type="button" onClick={() => clear()}>
         Clear draft
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          // What a page does after a save: reset the form from the row the
+          // server returned (trimmed), then clear the draft with that row.
+          const saved = { title: values.title.trim() };
+          setValues(saved);
+          clear(saved);
+        }}
+      >
+        Save
       </button>
       {restored ? <p>Restored draft</p> : null}
     </div>
@@ -63,6 +75,30 @@ describe("useFormDraft", () => {
     render(<Form />);
     expect(screen.getByLabelText("Title")).toHaveValue("");
     expect(screen.queryByText("Restored draft")).not.toBeInTheDocument();
+  });
+
+  it("re-baselines to the saved values, so trimmed saved data is not stored as a draft", async () => {
+    render(<Form />);
+    await userEvent.type(screen.getByLabelText("Title"), " Hello ");
+    expect(sessionStorage.length).toBe(1);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByLabelText("Title")).toHaveValue("Hello");
+    expect(sessionStorage.length).toBe(0);
+    // A later edit starts a new draft.
+    await userEvent.type(screen.getByLabelText("Title"), "!");
+    expect(sessionStorage.length).toBe(1);
+  });
+
+  it("resets restored to false after clear", async () => {
+    sessionStorage.setItem(
+      "mondelos-admin-draft:test-form",
+      JSON.stringify({ title: " Draft " }),
+    );
+    render(<Form />);
+    expect(screen.getByText("Restored draft")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.queryByText("Restored draft")).not.toBeInTheDocument();
+    expect(sessionStorage.length).toBe(0);
   });
 
   it("ignores a corrupt draft", () => {

@@ -6,6 +6,7 @@ import {
   insertRow,
   listRows,
   markConfirmed,
+  nextSortOrder,
   setPublished,
   swapOrder,
   updateRow,
@@ -34,6 +35,7 @@ const fake = vi.hoisted(() => {
       "eq",
       "is",
       "order",
+      "limit",
       "maybeSingle",
       "single",
     ]) {
@@ -261,6 +263,73 @@ describe("swapOrder", () => {
     fake.state.results = [fail("XX000")];
     await expect(swapOrder("faqs", a, b)).rejects.toBeInstanceOf(AdminError);
     expect(fake.state.calls.filter((c) => c.op === "update")).toHaveLength(1);
+  });
+});
+
+describe("swapOrder with equal sort_order", () => {
+  it("moves one row so the order actually changes (a was first, so it goes after b)", async () => {
+    fake.state.results = [ok([{ id: "a" }])];
+    await swapOrder(
+      "faqs",
+      { id: "a", sort_order: 3, created_at: "2026-01-01" },
+      { id: "b", sort_order: 3, created_at: "2026-01-02" },
+    );
+    const updates = fake.state.calls.filter((c) => c.op === "update");
+    expect(updates).toHaveLength(1);
+    expect(updates[0].args[0]).toEqual({ sort_order: 4 });
+    expect(call("eq")?.args).toEqual(["id", "a"]);
+  });
+
+  it("moves b after a when b was created first", async () => {
+    fake.state.results = [ok([{ id: "b" }])];
+    await swapOrder(
+      "faqs",
+      { id: "a", sort_order: 3, created_at: "2026-01-02" },
+      { id: "b", sort_order: 3, created_at: "2026-01-01" },
+    );
+    expect(call("eq")?.args).toEqual(["id", "b"]);
+    expect(call("update")?.args[0]).toEqual({ sort_order: 4 });
+  });
+
+  it("without created_at, treats a as first", async () => {
+    fake.state.results = [ok([{ id: "a" }])];
+    await swapOrder(
+      "faqs",
+      { id: "a", sort_order: 0 },
+      { id: "b", sort_order: 0 },
+    );
+    expect(call("eq")?.args).toEqual(["id", "a"]);
+    expect(call("update")?.args[0]).toEqual({ sort_order: 1 });
+  });
+});
+
+describe("nextSortOrder", () => {
+  it("is the highest sort_order plus one", async () => {
+    fake.state.results = [ok([{ sort_order: 7 }])];
+    expect(await nextSortOrder("faqs")).toBe(8);
+    expect(fake.state.calls.find((c) => c.op === "order")?.args).toEqual([
+      "sort_order",
+      { ascending: false },
+    ]);
+    expect(call("limit")?.args).toEqual([1]);
+  });
+
+  it("is 0 for an empty table", async () => {
+    fake.state.results = [ok([])];
+    expect(await nextSortOrder("faqs")).toBe(0);
+  });
+
+  it("can be scoped by a filter", async () => {
+    fake.state.results = [ok([{ sort_order: 2 }])];
+    expect(
+      await nextSortOrder("attraction_images", { attraction_id: "x" }),
+    ).toBe(3);
+    expect(call("eq")?.args).toEqual(["attraction_id", "x"]);
+  });
+
+  it("throws an AdminError on failure", async () => {
+    fake.state.results = [fail("XX000")];
+    await expect(nextSortOrder("faqs")).rejects.toBeInstanceOf(AdminError);
   });
 });
 

@@ -1,8 +1,17 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Link, createRoutesStub } from "react-router";
+import { Link, createRoutesStub, useLocation } from "react-router";
 
-import { useUnsavedChanges } from "./useUnsavedChanges";
+import {
+  hasUnsavedChanges,
+  useUnsavedChanges,
+  withUnsavedGuardSuspended,
+} from "./useUnsavedChanges";
+
+function SearchEcho() {
+  const { search } = useLocation();
+  return <p>search:{search}</p>;
+}
 
 function Editor({ dirty }: { dirty: boolean }) {
   const { leaveDialog } = useUnsavedChanges(dirty);
@@ -10,6 +19,8 @@ function Editor({ dirty }: { dirty: boolean }) {
     <div>
       <h1>Editor page</h1>
       <Link to="/other">Go elsewhere</Link>
+      <Link to="/?tab=2">Same page, other tab</Link>
+      <SearchEcho />
       {leaveDialog}
     </div>
   );
@@ -44,6 +55,46 @@ describe("useUnsavedChanges", () => {
     expect(
       screen.getByRole("heading", { name: "Editor page" }),
     ).toBeInTheDocument();
+  });
+
+  it("does not ask when only the search params change on the same page", async () => {
+    renderEditor(true);
+    await userEvent.click(
+      screen.getByRole("link", { name: "Same page, other tab" }),
+    );
+    expect(await screen.findByText("search:?tab=2")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("tells the owner the changes are kept as a draft on this device", async () => {
+    renderEditor(true);
+    await userEvent.click(screen.getByRole("link", { name: "Go elsewhere" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Leave without saving?",
+    });
+    expect(dialog).toHaveAccessibleDescription(
+      "Your changes are kept as a draft on this device.",
+    );
+  });
+
+  it("reports unsaved changes while dirty, and not when clean", () => {
+    const dirty = renderEditor(true);
+    expect(hasUnsavedChanges()).toBe(true);
+    dirty.unmount();
+    expect(hasUnsavedChanges()).toBe(false);
+    renderEditor(false);
+    expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  it("lets a navigation through while the guard is suspended", async () => {
+    renderEditor(true);
+    await withUnsavedGuardSuspended(async () => {
+      await userEvent.click(screen.getByRole("link", { name: "Go elsewhere" }));
+      expect(
+        await screen.findByRole("heading", { name: "Other page" }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("navigates when the leave is confirmed", async () => {

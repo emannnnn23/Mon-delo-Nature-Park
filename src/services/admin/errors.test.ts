@@ -46,6 +46,13 @@ describe("toFriendlyError", () => {
     );
   });
 
+  it("maps a TypeError that is not a network failure to the generic message", () => {
+    expect(
+      toFriendlyError(new TypeError("Cannot read properties of undefined"))
+        .friendly,
+    ).toBe(GENERIC);
+  });
+
   it("maps a PostgREST error that wraps a network failure", () => {
     expect(
       toFriendlyError({ message: "TypeError: Failed to fetch", code: "" })

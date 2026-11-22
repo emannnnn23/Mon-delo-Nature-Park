@@ -109,6 +109,30 @@ describe("useFocusTrap", () => {
   describe("with layout", () => {
     afterEach(() => vi.restoreAllMocks());
 
+    it("skips an element that checkVisibility reports as invisible", () => {
+      vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(
+        () => [{}] as unknown as DOMRectList,
+      );
+      const proto = HTMLElement.prototype as unknown as {
+        checkVisibility?: (o?: unknown) => boolean;
+      };
+      proto.checkVisibility = function (this: HTMLElement) {
+        return this.getAttribute("aria-label") !== "Invisible";
+      };
+      try {
+        render(
+          <MixedTrap>
+            <input aria-label="Invisible" />
+          </MixedTrap>,
+        );
+        screen.getByRole("button", { name: "Last" }).focus();
+        tab();
+        expect(screen.getByRole("button", { name: "First" })).toHaveFocus();
+      } finally {
+        delete proto.checkVisibility;
+      }
+    });
+
     it("skips an element that has no client rects, but keeps rendered ones", () => {
       // Pretend the browser has layout: everything is rendered except the
       // element labelled "No box".

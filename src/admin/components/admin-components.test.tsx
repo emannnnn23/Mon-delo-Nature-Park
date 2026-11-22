@@ -48,6 +48,23 @@ describe("FormField", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("merges an existing aria-describedby and keeps the child's own id", () => {
+    render(
+      <FormField label="Name" name="name" error="Bad name.">
+        <input id="mine" aria-describedby="extra" />
+      </FormField>,
+    );
+    const input = screen.getByLabelText("Name");
+    expect(input).toHaveAttribute("id", "mine");
+    const ids = (input.getAttribute("aria-describedby") ?? "").split(" ");
+    expect(ids).toContain("extra");
+    expect(ids.length).toBe(2);
+    expect(
+      document.getElementById(ids.find((i) => i !== "extra") ?? "")
+        ?.textContent,
+    ).toBe("Bad name.");
+  });
+
   it("supports a render function for custom controls", () => {
     render(
       <FormField label="Notes" name="notes">
@@ -66,6 +83,20 @@ describe("PublishToggle", () => {
     expect(toggle).toHaveAttribute("aria-checked", "false");
     await userEvent.click(toggle);
     expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it("includes the visible state words in the accessible name when compact", () => {
+    render(
+      <PublishToggle
+        compact
+        label="Publish Tour on website"
+        checked={false}
+        onChange={() => {}}
+      />,
+    );
+    expect(
+      screen.getByRole("switch", { name: /Publish Tour on website.*Hidden/ }),
+    ).toBeInTheDocument();
   });
 
   it("reflects the checked state", () => {
@@ -98,20 +129,49 @@ describe("ReorderButtons", () => {
         disableUp
       />,
     );
-    expect(
-      screen.getByRole("button", { name: "Move Beautiful Gardens up" }),
-    ).toBeDisabled();
+    const up = screen.getByRole("button", {
+      name: "Move Beautiful Gardens up",
+    });
+    // aria-disabled, not disabled: the button stays focusable so keyboard
+    // focus is not dropped when the item reaches an end of the list.
+    expect(up).toHaveAttribute("aria-disabled", "true");
+    expect(up).not.toBeDisabled();
+    await userEvent.click(up);
+    expect(onUp).not.toHaveBeenCalled();
     await userEvent.click(
       screen.getByRole("button", { name: "Move Beautiful Gardens down" }),
     );
     expect(onDown).toHaveBeenCalledTimes(1);
-    expect(onUp).not.toHaveBeenCalled();
+  });
+
+  it("keeps a pressed button focused when it becomes unavailable", async () => {
+    function Harness() {
+      const [atTop, setAtTop] = useState(false);
+      return (
+        <ReorderButtons
+          label="X"
+          disableUp={atTop}
+          onUp={() => setAtTop(true)}
+          onDown={() => {}}
+        />
+      );
+    }
+    render(<Harness />);
+    const up = screen.getByRole("button", { name: "Move X up" });
+    up.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(up).toHaveAttribute("aria-disabled", "true");
+    expect(up).toHaveFocus();
   });
 
   it("falls back to plain names without a label", () => {
     render(<ReorderButtons onUp={() => {}} onDown={() => {}} />);
-    expect(screen.getByRole("button", { name: "Move up" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Move down" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Move up" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
+    expect(
+      screen.getByRole("button", { name: "Move down" }),
+    ).not.toHaveAttribute("aria-disabled");
   });
 });
 
@@ -183,6 +243,34 @@ describe("ConfirmDialog", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(opener).toHaveFocus();
+  });
+
+  it("ignores Escape and the backdrop while busy, and keeps focus on the dialog", async () => {
+    const onCancel = vi.fn();
+    function Busy({ busy }: { busy: boolean }) {
+      return (
+        <ConfirmDialog
+          open
+          busy={busy}
+          title="Deleting"
+          body="Please wait."
+          confirmLabel="Delete"
+          onConfirm={() => {}}
+          onCancel={onCancel}
+        />
+      );
+    }
+    const { rerender, container } = render(<Busy busy={false} />);
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    rerender(<Busy busy />);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.tab();
+    expect(dialog).toHaveFocus();
+    const backdrop = container.querySelector("[aria-hidden='true']");
+    await userEvent.click(backdrop as Element);
+    expect(onCancel).not.toHaveBeenCalled();
   });
 
   it("confirms with the confirm button", async () => {
@@ -320,13 +408,126 @@ describe("CrudList", () => {
     renderList();
     expect(
       screen.getByRole("button", { name: "Move Beautiful Gardens up" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByRole("button", { name: "Move Hilltop View down" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByRole("button", { name: "Move Beautiful Gardens down" }),
-    ).toBeEnabled();
+    ).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("does not report a reorder from an unavailable button", async () => {
+    const { onReorder } = renderList();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Move Beautiful Gardens up" }),
+    );
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it("keeps every Move button focusable while busy", async () => {
+    const { onReorder } = renderList({ busy: true });
+    const down = screen.getByRole("button", {
+      name: "Move Beautiful Gardens down",
+    });
+    expect(down).toHaveAttribute("aria-disabled", "true");
+    expect(down).not.toBeDisabled();
+    await userEvent.click(down);
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it("keeps focus on the Move control after an item moves to the top", async () => {
+    function Stateful() {
+      const [list, setList] = useState(items);
+      return (
+        <MemoryRouter>
+          <CrudList
+            items={list}
+            render={render1}
+            emptyText="none"
+            onReorder={(item, dir) =>
+              setList((cur) => {
+                const i = cur.findIndex((x) => x.id === item.id);
+                const j = dir === "up" ? i - 1 : i + 1;
+                const next = [...cur];
+                [next[i], next[j]] = [next[j], next[i]];
+                return next;
+              })
+            }
+          />
+        </MemoryRouter>
+      );
+    }
+    render(<Stateful />);
+    const up = screen.getByRole("button", { name: "Move Hilltop View up" });
+    up.focus();
+    await userEvent.keyboard("{Enter}");
+    const after = screen.getByRole("button", { name: "Move Hilltop View up" });
+    expect(after).toHaveAttribute("aria-disabled", "true");
+    expect(after).toHaveFocus();
+  });
+
+  it("moves focus to a neighbouring row after a confirmed delete", async () => {
+    function Stateful() {
+      const [list, setList] = useState(items);
+      return (
+        <MemoryRouter>
+          <CrudList
+            items={list}
+            render={render1}
+            emptyText="none"
+            onDelete={(item) =>
+              setList((cur) => cur.filter((x) => x.id !== item.id))
+            }
+          />
+        </MemoryRouter>
+      );
+    }
+    render(<Stateful />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete Hilltop View" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+    const row = screen.getByText("Beautiful Gardens").closest("tr");
+    expect(row).not.toBeNull();
+    expect(row?.contains(document.activeElement)).toBe(true);
+  });
+
+  it("moves focus to the empty message after deleting the last item", async () => {
+    function Stateful() {
+      const [list, setList] = useState([items[0]]);
+      return (
+        <MemoryRouter>
+          <CrudList
+            items={list}
+            render={render1}
+            emptyText="Nothing here yet."
+            onDelete={() => setList([])}
+          />
+        </MemoryRouter>
+      );
+    }
+    render(<Stateful />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete Beautiful Gardens" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+    expect(screen.getByText("Nothing here yet.")).toHaveFocus();
+  });
+
+  it("makes the item cell a row header", () => {
+    renderList();
+    expect(
+      screen.getByRole("rowheader", { name: /Beautiful Gardens/ }),
+    ).toBeInTheDocument();
   });
 
   it("reports reorder with the item and direction", async () => {
@@ -340,7 +541,7 @@ describe("CrudList", () => {
   it("toggles publishing per item", async () => {
     const { onTogglePublish } = renderList();
     await userEvent.click(
-      screen.getByRole("switch", { name: "Publish Hilltop View on website" }),
+      screen.getByRole("switch", { name: /Publish Hilltop View on website/ }),
     );
     expect(onTogglePublish).toHaveBeenCalledWith(items[1], true);
   });

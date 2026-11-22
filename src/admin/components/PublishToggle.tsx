@@ -25,7 +25,6 @@ export function PublishToggle({
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={compact ? label : undefined}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className="inline-flex min-h-11 items-center gap-3 rounded-full py-1 pr-2 text-left text-sm font-semibold text-ink-900 disabled:cursor-not-allowed disabled:opacity-60"
@@ -47,7 +46,12 @@ export function PublishToggle({
         />
       </span>
       {compact ? (
-        <span aria-hidden="true">{checked ? "On website" : "Hidden"}</span>
+        // The label stays in the accessible name and so does the visible
+        // status, so what a voice-control user reads is what they can say.
+        <>
+          <span className="sr-only">{label}</span>
+          <span>{checked ? "On website" : "Hidden"}</span>
+        </>
       ) : (
         label
       )}

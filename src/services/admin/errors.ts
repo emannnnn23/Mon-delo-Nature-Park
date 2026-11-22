@@ -39,7 +39,8 @@ function codeOf(e: unknown): string | undefined {
 }
 
 function isNetworkError(e: unknown): boolean {
-  if (e instanceof TypeError) return true;
+  // A fetch failure is a TypeError, but so is any programming error: only
+  // treat it as a connection problem when its message says so.
   if (typeof e !== "object" || e === null || !("message" in e)) return false;
   const { message } = e;
   return typeof message === "string" && NETWORK_MESSAGE.test(message);

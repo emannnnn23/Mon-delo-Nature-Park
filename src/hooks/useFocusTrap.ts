@@ -36,14 +36,18 @@ function isHiddenByStyle(el: HTMLElement): boolean {
  * A tab stop a keyboard user can actually reach: tabindex >= 0, not inside a
  * `[hidden]` or `[inert]` subtree, and rendered. "Rendered" means it has a box
  * (`getClientRects().length > 0`), which catches `display:none` anywhere up
- * the tree. Environments without layout (jsdom) cannot answer that, so there
+ * the tree, and `checkVisibility` (where the browser has it) also catches
+ * `visibility:hidden`. Environments without layout (jsdom) cannot answer that, so there
  * the check falls back to computed `display:none` / `visibility:hidden` on the
  * element and its ancestors, which is all such an environment can observe.
  */
 function isTabbable(el: HTMLElement, noLayout: boolean): boolean {
   if (el.tabIndex < 0) return false;
   if (el.closest("[hidden], [inert]")) return false;
-  return noLayout ? !isHiddenByStyle(el) : el.getClientRects().length > 0;
+  if (noLayout) return !isHiddenByStyle(el);
+  if (el.getClientRects().length === 0) return false;
+  // Catches `visibility:hidden` (which still has a box) where supported.
+  return el.checkVisibility?.({ visibilityProperty: true }) ?? true;
 }
 
 type FocusTrapOptions = {
@@ -96,7 +100,13 @@ export function useFocusTrap(
       const items = Array.from(
         container.querySelectorAll<HTMLElement>(FOCUSABLE),
       ).filter((el) => isTabbable(el, noLayout));
-      if (items.length === 0) return;
+      if (items.length === 0) {
+        // Nothing to tab to (e.g. every button is disabled while busy): keep
+        // focus on the container rather than letting it leave the dialog.
+        event.preventDefault();
+        container.focus();
+        return;
+      }
       const first = items[0];
       const last = items[items.length - 1];
       const current = document.activeElement as HTMLElement | null;

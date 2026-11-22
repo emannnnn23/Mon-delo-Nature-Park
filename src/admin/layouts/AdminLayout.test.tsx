@@ -1,0 +1,119 @@
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createRoutesStub } from "react-router";
+
+import { useUnsavedChanges } from "~/admin/hooks/useUnsavedChanges";
+import { signOut, subscribeToSignOut } from "~/services/auth";
+
+import { Toast, dismissAllToasts, useToast } from "../components/Toast";
+import { AdminLayout } from "./AdminLayout";
+
+vi.mock("~/services/auth", () => ({
+  signOut: vi.fn(),
+  subscribeToSignOut: vi.fn(),
+}));
+
+function DirtyPage() {
+  const { leaveDialog } = useUnsavedChanges(true);
+  const toast = useToast();
+  return (
+    <div>
+      <h1>Dirty form</h1>
+      <button type="button" onClick={() => toast.success("Saved earlier.")}>
+        Raise toast
+      </button>
+      {leaveDialog}
+    </div>
+  );
+}
+
+function renderLayout() {
+  const Stub = createRoutesStub([
+    {
+      path: "/admin",
+      Component: () => <AdminLayout email="owner@mondelos.test" />,
+      children: [{ index: true, Component: DirtyPage }],
+    },
+    { path: "/admin/login", Component: () => <h1>Login page</h1> },
+  ]);
+  return render(<Stub initialEntries={["/admin"]} />);
+}
+
+beforeEach(() => {
+  vi.mocked(signOut).mockResolvedValue(undefined);
+  vi.mocked(subscribeToSignOut).mockReturnValue(() => {});
+});
+
+afterEach(() => {
+  vi.mocked(signOut).mockReset();
+  dismissAllToasts();
+});
+
+describe("AdminLayout sign-out with unsaved changes", () => {
+  it("asks first and does not sign out until confirmed", async () => {
+    renderLayout();
+    const aside = screen.getAllByRole("button", { name: "Sign out" })[0];
+    await userEvent.click(aside);
+    const dialog = await screen.findByRole("dialog", {
+      name: "Sign out without saving?",
+    });
+    expect(signOut).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Stay" }));
+    expect(signOut).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("heading", { name: "Dirty form" }),
+    ).toBeInTheDocument();
+  });
+
+  it("signs out and goes to login once confirmed, without a second prompt", async () => {
+    renderLayout();
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Sign out" })[0],
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Sign out without saving?",
+    });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Sign out" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Login page" }),
+    ).toBeInTheDocument();
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("dismisses any toasts when signing out", async () => {
+    renderLayout();
+    await userEvent.click(screen.getByRole("button", { name: "Raise toast" }));
+    expect(screen.getByText("Saved earlier.")).toBeInTheDocument();
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Sign out" })[0],
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Sign out without saving?",
+    });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Sign out" }),
+    );
+    await screen.findByRole("heading", { name: "Login page" });
+    // The layout is gone; a fresh Toast must not show the old message.
+    render(<Toast />);
+    expect(screen.queryByText("Saved earlier.")).not.toBeInTheDocument();
+  });
+
+  it("closes the phone menu before signing out", async () => {
+    renderLayout();
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    const menu = screen.getByRole("dialog", { name: "Admin menu" });
+    await userEvent.click(
+      within(menu).getByRole("button", { name: "Sign out" }),
+    );
+    expect(
+      screen.queryByRole("dialog", { name: "Admin menu" }),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Sign out without saving?" }),
+    ).toBeInTheDocument();
+  });
+});

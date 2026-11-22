@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -59,10 +59,51 @@ export function CrudList<T extends CrudItem>({
   busy = false,
 }: CrudListProps<T>) {
   const [pendingDelete, setPendingDelete] = useState<T | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const emptyRef = useRef<HTMLParagraphElement>(null);
+  const refocus = useRef<
+    | { kind: "reorder"; id: string; direction: "up" | "down" }
+    | { kind: "delete"; index: number }
+    | null
+  >(null);
+
+  // After a move or a delete the control that had focus may be gone or have
+  // been re-created, which drops focus to the page. If that happened, put it
+  // somewhere sensible: the same Move button, or the neighbouring row (the
+  // empty message when nothing is left). If focus is still somewhere real, or
+  // the owner moved it, leave it alone.
+  useEffect(() => {
+    const target = refocus.current;
+    if (!target) return;
+    refocus.current = null;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    if (items.length === 0) {
+      emptyRef.current?.focus();
+      return;
+    }
+    const rows = Array.from(
+      tableRef.current?.querySelectorAll<HTMLElement>("tr[data-row-id]") ?? [],
+    );
+    if (target.kind === "reorder") {
+      rows
+        .find((row) => row.dataset.rowId === target.id)
+        ?.querySelector<HTMLElement>(`[data-reorder="${target.direction}"]`)
+        ?.focus();
+    } else {
+      rows[Math.min(target.index, rows.length - 1)]
+        ?.querySelector<HTMLElement>("a[href], button:not([disabled])")
+        ?.focus();
+    }
+  }, [items]);
 
   if (items.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-earth-600/50 bg-white px-5 py-10 text-center text-ink-600">
+      <p
+        ref={emptyRef}
+        tabIndex={-1}
+        className="rounded-xl border border-dashed border-earth-600/50 bg-white px-5 py-10 text-center text-ink-600 focus:outline-none"
+      >
         {emptyText}
       </p>
     );
@@ -73,7 +114,7 @@ export function CrudList<T extends CrudItem>({
 
   return (
     <>
-      <table className="w-full text-left max-lg:block">
+      <table ref={tableRef} className="w-full text-left max-lg:block">
         <thead className="sr-only lg:not-sr-only">
           <tr className="border-b border-earth-600/30 text-sm text-ink-600">
             <th scope="col" className="px-4 py-2 font-semibold">
@@ -100,9 +141,13 @@ export function CrudList<T extends CrudItem>({
             return (
               <tr
                 key={item.id}
+                data-row-id={item.id}
                 className="max-lg:block max-lg:rounded-xl max-lg:border max-lg:border-cream-100 max-lg:bg-white max-lg:py-2 max-lg:shadow-sm lg:border-b lg:border-cream-100"
               >
-                <td className={`${CELL} min-w-0`}>
+                <th
+                  scope="row"
+                  className={`${CELL} min-w-0 text-left font-normal`}
+                >
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="font-semibold text-forest-900">
                       {view.title ?? view.label}
@@ -114,7 +159,7 @@ export function CrudList<T extends CrudItem>({
                       {view.detail}
                     </div>
                   ) : null}
-                </td>
+                </th>
                 {hasStatus ? (
                   <td className={CELL}>
                     <PublishToggle
@@ -132,8 +177,22 @@ export function CrudList<T extends CrudItem>({
                       label={view.label}
                       disableUp={busy || index === 0}
                       disableDown={busy || index === items.length - 1}
-                      onUp={() => onReorder(item, "up")}
-                      onDown={() => onReorder(item, "down")}
+                      onUp={() => {
+                        refocus.current = {
+                          kind: "reorder",
+                          id: item.id,
+                          direction: "up",
+                        };
+                        onReorder(item, "up");
+                      }}
+                      onDown={() => {
+                        refocus.current = {
+                          kind: "reorder",
+                          id: item.id,
+                          direction: "down",
+                        };
+                        onReorder(item, "down");
+                      }}
                     />
                   </td>
                 ) : null}
@@ -179,7 +238,13 @@ export function CrudList<T extends CrudItem>({
         onConfirm={() => {
           const item = pendingDelete;
           setPendingDelete(null);
-          if (item && onDelete) onDelete(item);
+          if (item && onDelete) {
+            refocus.current = {
+              kind: "delete",
+              index: items.findIndex((x) => x.id === item.id),
+            };
+            onDelete(item);
+          }
         }}
       />
     </>

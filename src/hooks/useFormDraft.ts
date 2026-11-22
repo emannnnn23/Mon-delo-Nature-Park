@@ -50,8 +50,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  *   removed.
  * - On mount a saved draft is merged over the starting values with `setValues`
  *   and `restored` is true, so the page can say so.
- * - Call `clear()` after a successful save. The saved state becomes the new
- *   starting point, so only later edits create a draft again.
+ * - Call `clear(savedValues)` after a successful save, passing what the form
+ *   is reset to (usually the row the server returned: it is trimmed, with ''
+ *   turned into null). That becomes the new starting point, so only later
+ *   edits create a draft again. Without an argument the latest rendered
+ *   values are used, which can be stale if the form is reset from the server
+ *   right after.
  *
  * Values must be JSON-serialisable (File objects and the like are not kept).
  * `key` should be unique per form and record, e.g. `attraction:<id>`.
@@ -60,12 +64,13 @@ export function useFormDraft<T>(
   key: string,
   values: T,
   setValues: (values: T) => void,
-): { clear: () => void; restored: boolean } {
+): { clear: (savedValues?: T) => void; restored: boolean } {
   const storageKey = PREFIX + key;
   const serialized = serialize(values);
 
   const [initialValues] = useState(values);
   const [draft] = useState(() => readDraft(storageKey));
+  const [restored, setRestored] = useState(draft !== null);
   const baseline = useRef(serialize(initialValues));
   const latest = useRef(serialized);
   const setValuesRef = useRef(setValues);
@@ -92,10 +97,15 @@ export function useFormDraft<T>(
     else writeDraft(storageKey, serialized);
   }, [serialized, storageKey]);
 
-  const clear = useCallback(() => {
-    removeDraft(storageKey);
-    baseline.current = latest.current;
-  }, [storageKey]);
+  const clear = useCallback(
+    (savedValues?: T) => {
+      removeDraft(storageKey);
+      baseline.current =
+        savedValues === undefined ? latest.current : serialize(savedValues);
+      setRestored(false);
+    },
+    [storageKey],
+  );
 
-  return { clear, restored: draft !== null };
+  return { clear, restored };
 }

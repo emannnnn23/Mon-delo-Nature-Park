@@ -7,7 +7,12 @@ import { useFocusTrap } from "~/hooks/useFocusTrap";
 import { useSession } from "~/hooks/useSession";
 import { signOut } from "~/services/auth";
 
-import { Toast } from "../components/Toast";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { Toast, dismissAllToasts } from "../components/Toast";
+import {
+  hasUnsavedChanges,
+  withUnsavedGuardSuspended,
+} from "../hooks/useUnsavedChanges";
 import { ADMIN_NAV } from "../nav";
 
 type AdminLayoutProps = {
@@ -145,9 +150,30 @@ export function AdminLayout({ email }: AdminLayoutProps) {
 
   useSession();
 
-  async function handleSignOut() {
-    await signOut();
-    await navigate("/admin/login", { replace: true });
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+
+  async function finishSignOut() {
+    dismissAllToasts();
+    // The owner has already agreed to leave (or nothing is unsaved), so the
+    // form's own leave prompt must not fire a second time.
+    await withUnsavedGuardSuspended(async () => {
+      await signOut();
+      await navigate("/admin/login", { replace: true });
+    });
+  }
+
+  // Signing out ends the session at once, so a form with unsaved changes has
+  // to be confirmed *before* that: if the navigation were held afterwards the
+  // owner would be left on the page with a dead session. (Navigating first and
+  // signing out after does not work either: the login page sends a signed-in
+  // admin straight back.)
+  function handleSignOut() {
+    setOpenedAt(null);
+    if (hasUnsavedChanges()) {
+      setConfirmingSignOut(true);
+      return;
+    }
+    void finishSignOut();
   }
 
   return (
@@ -200,6 +226,20 @@ export function AdminLayout({ email }: AdminLayoutProps) {
       </div>
 
       <Toast />
+
+      <ConfirmDialog
+        open={confirmingSignOut}
+        title="Sign out without saving?"
+        body="Your changes are kept as a draft on this device."
+        confirmLabel="Sign out"
+        cancelLabel="Stay"
+        destructive
+        onCancel={() => setConfirmingSignOut(false)}
+        onConfirm={() => {
+          setConfirmingSignOut(false);
+          void finishSignOut();
+        }}
+      />
 
       {menuOpen ? (
         <PhoneMenu

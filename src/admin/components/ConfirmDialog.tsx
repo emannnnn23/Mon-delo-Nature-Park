@@ -1,5 +1,5 @@
 import { TriangleAlert } from "lucide-react";
-import { useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 import { useFocusTrap } from "~/hooks/useFocusTrap";
 
@@ -40,7 +40,17 @@ export function ConfirmDialog({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const bodyId = useId();
-  useFocusTrap(panelRef, open, onCancel, { initialFocusRef: cancelRef });
+  // While the confirmed action runs, Escape and the backdrop do nothing.
+  const cancel = () => {
+    if (!busy) onCancel();
+  };
+  useFocusTrap(panelRef, open, cancel, { initialFocusRef: cancelRef });
+
+  // Both buttons are disabled while busy, which would drop focus to the page
+  // behind the dialog: park it on the panel instead.
+  useEffect(() => {
+    if (open && busy) panelRef.current?.focus();
+  }, [open, busy]);
 
   if (!open) return null;
 
@@ -49,7 +59,7 @@ export function ConfirmDialog({
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-ink-900/60"
-        onClick={onCancel}
+        onClick={cancel}
       />
       <div
         ref={panelRef}
@@ -57,7 +67,8 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={bodyId}
-        className="relative w-full max-w-md animate-fade-in rounded-2xl border border-cream-100 bg-white p-6 shadow-2xl motion-reduce:animate-none sm:p-7"
+        tabIndex={-1}
+        className="relative w-full max-w-md animate-fade-in rounded-2xl border border-cream-100 bg-white p-6 shadow-2xl focus:outline-none motion-reduce:animate-none sm:p-7"
       >
         <div className="flex items-start gap-3">
           {destructive ? (

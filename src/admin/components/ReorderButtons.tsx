@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
 
 type ReorderButtonsProps = {
   onUp: () => void;
@@ -7,6 +7,8 @@ type ReorderButtonsProps = {
   disableDown?: boolean;
   /** The item's name, so screen readers hear "Move Beautiful Gardens up". */
   label?: string;
+  /** For a grid: the buttons read "left" and "right" and use side arrows. */
+  horizontal?: boolean;
 };
 
 const BUTTON =
@@ -24,8 +26,13 @@ export function ReorderButtons({
   disableUp = false,
   disableDown = false,
   label,
+  horizontal = false,
 }: ReorderButtonsProps) {
   const subject = label ? ` ${label}` : "";
+  const before = horizontal ? "left" : "up";
+  const after = horizontal ? "right" : "down";
+  const BeforeIcon = horizontal ? ArrowLeft : ArrowUp;
+  const AfterIcon = horizontal ? ArrowRight : ArrowDown;
   return (
     <div className="flex gap-2">
       <button
@@ -35,10 +42,10 @@ export function ReorderButtons({
         }}
         aria-disabled={disableUp || undefined}
         data-reorder="up"
-        aria-label={`Move${subject} up`}
+        aria-label={`Move${subject} ${before}`}
         className={BUTTON}
       >
-        <ArrowUp aria-hidden="true" className="size-5" />
+        <BeforeIcon aria-hidden="true" className="size-5" />
       </button>
       <button
         type="button"
@@ -47,10 +54,10 @@ export function ReorderButtons({
         }}
         aria-disabled={disableDown || undefined}
         data-reorder="down"
-        aria-label={`Move${subject} down`}
+        aria-label={`Move${subject} ${after}`}
         className={BUTTON}
       >
-        <ArrowDown aria-hidden="true" className="size-5" />
+        <AfterIcon aria-hidden="true" className="size-5" />
       </button>
     </div>
   );

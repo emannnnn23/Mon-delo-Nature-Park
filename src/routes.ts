@@ -25,6 +25,7 @@ export default [
     route("admin/pages/:page", "routes/admin/pages.$page.tsx"),
     route("admin/attractions", "routes/admin/attractions.tsx"),
     route("admin/attractions/:id", "routes/admin/attractions.$id.tsx"),
+    route("admin/gallery", "routes/admin/gallery.tsx"),
     route("admin/media", "routes/admin/media.tsx"),
     route("admin/*", "routes/admin/not-found.tsx"),
   ]),

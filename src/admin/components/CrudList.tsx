@@ -35,6 +35,8 @@ type CrudListProps<T extends CrudItem> = {
   /** Text of the delete confirmation. Defaults to "This can't be undone." */
   deleteBody?: (item: T) => ReactNode;
   onTogglePublish?: (item: T, next: boolean) => void;
+  /** For rows without an edit page: shows an Edit button that calls this. */
+  onEdit?: (item: T) => void;
   /** Disables every control, e.g. while a save is running. */
   busy?: boolean;
 };
@@ -59,6 +61,7 @@ export function CrudList<T extends CrudItem>({
   onDelete,
   deleteBody,
   onTogglePublish,
+  onEdit,
   busy = false,
 }: CrudListProps<T>) {
   const [pendingDelete, setPendingDelete] = useState<T | null>(null);
@@ -210,6 +213,17 @@ export function CrudList<T extends CrudItem>({
                         <Pencil aria-hidden="true" className="size-4" />
                         Edit
                       </Link>
+                    ) : onEdit ? (
+                      <button
+                        type="button"
+                        aria-label={`Edit ${view.label}`}
+                        disabled={busy}
+                        onClick={() => onEdit(item)}
+                        className={`${ACTION} border-forest-900 text-forest-900 hover:bg-forest-900 hover:text-ivory-50`}
+                      >
+                        <Pencil aria-hidden="true" className="size-4" />
+                        Edit
+                      </button>
                     ) : null}
                     {onDelete ? (
                       <button

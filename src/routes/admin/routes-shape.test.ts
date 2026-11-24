@@ -32,6 +32,7 @@ describe("src/routes.ts", () => {
       "admin/pages/:page",
       "admin/attractions",
       "admin/attractions/:id",
+      "admin/gallery",
       "admin/media",
       "admin/*",
     ]);

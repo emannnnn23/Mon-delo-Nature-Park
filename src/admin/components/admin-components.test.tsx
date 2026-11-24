@@ -164,6 +164,25 @@ describe("ReorderButtons", () => {
     expect(up).toHaveFocus();
   });
 
+  it("can name the buttons left and right for a grid", async () => {
+    const onUp = vi.fn();
+    const onDown = vi.fn();
+    render(
+      <ReorderButtons horizontal label="photo 3" onUp={onUp} onDown={onDown} />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Move photo 3 left" }),
+    );
+    expect(onUp).toHaveBeenCalledTimes(1);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Move photo 3 right" }),
+    );
+    expect(onDown).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("button", { name: /up|down/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("falls back to plain names without a label", () => {
     render(<ReorderButtons onUp={() => {}} onDown={() => {}} />);
     expect(screen.getByRole("button", { name: "Move up" })).not.toHaveAttribute(
@@ -418,6 +437,18 @@ describe("CrudList", () => {
     );
     expect(screen.getByText("Nothing here yet.")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("offers an Edit button when the row has no edit page", async () => {
+    const onEdit = vi.fn();
+    renderList({
+      onEdit,
+      render: (item) => ({ label: item.name }),
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Edit Hilltop View" }),
+    );
+    expect(onEdit).toHaveBeenCalledWith(items[1]);
   });
 
   it("lists items with edit links named for screen readers", () => {

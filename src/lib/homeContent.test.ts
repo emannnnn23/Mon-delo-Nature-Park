@@ -1,6 +1,11 @@
 import { placeholders } from "../content/placeholders";
 import type { Attraction, GalleryImage } from "../types/content";
-import { homeMetaDescription, selectHomeContent } from "./homeContent";
+import {
+  MAX_FEATURED_ATTRACTIONS,
+  MAX_GALLERY_IMAGES,
+  homeMetaDescription,
+  selectHomeContent,
+} from "./homeContent";
 
 function source() {
   return {
@@ -110,5 +115,20 @@ describe("homeMetaDescription", () => {
     expect(homeMetaDescription([])).toBe(
       "Mondelos Nature Park in Kawayan, Biliran, Philippines.",
     );
+  });
+});
+
+describe("homepage caps", () => {
+  it("exports the caps the admin shares with the homepage", () => {
+    expect(MAX_FEATURED_ATTRACTIONS).toBe(3);
+    expect(MAX_GALLERY_IMAGES).toBe(5);
+  });
+
+  it("selectHomeContent cuts featured gallery photos at MAX_GALLERY_IMAGES", () => {
+    const images = Array.from({ length: MAX_GALLERY_IMAGES + 2 }, (_, i) =>
+      galleryImage(`g${i}`, true),
+    );
+    const result = selectHomeContent({ ...source(), galleryImages: images });
+    expect(result.galleryImages).toHaveLength(MAX_GALLERY_IMAGES);
   });
 });

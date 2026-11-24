@@ -24,8 +24,10 @@ export type HomeContentSource = {
   testimonials: Testimonial[];
 };
 
-const MAX_FEATURED_ATTRACTIONS = 3;
-const MAX_GALLERY_IMAGES = 5;
+/** How many featured attractions the homepage shows (admin hints use it too). */
+export const MAX_FEATURED_ATTRACTIONS = 3;
+/** How many featured gallery photos the homepage shows. */
+export const MAX_GALLERY_IMAGES = 5;
 const MAX_META_DESCRIPTION = 155;
 const FALLBACK_DESCRIPTION =
   "Mondelos Nature Park in Kawayan, Biliran, Philippines.";

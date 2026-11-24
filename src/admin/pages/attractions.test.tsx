@@ -288,6 +288,67 @@ describe("AttractionsListPage", () => {
   });
 });
 
+describe("AttractionsListPage homepage labels", () => {
+  function renderRows(rows: Attraction[]) {
+    const Stub = createRoutesStub([
+      {
+        path: "/admin/attractions",
+        Component: () => <AttractionsListPage rows={rows} />,
+      },
+    ]);
+    return render(<Stub initialEntries={["/admin/attractions"]} />);
+  }
+
+  const featured = (
+    id: string,
+    order: number,
+    extra: Partial<Attraction> = {},
+  ) =>
+    attraction(id, {
+      name: id,
+      sort_order: order,
+      is_featured: true,
+      ...extra,
+    });
+
+  it("says On the homepage only for the first three published featured attractions", () => {
+    renderRows([
+      featured("A1", 1),
+      featured("A2", 2),
+      featured("A3", 3),
+      featured("A4", 4),
+      attraction("A5", { name: "A5", sort_order: 5 }),
+    ]);
+    const item = (name: string) =>
+      screen.getByText(name).closest("tr") as HTMLElement;
+    for (const name of ["A1", "A2", "A3"]) {
+      expect(
+        within(item(name)).getByText("On the homepage"),
+      ).toBeInTheDocument();
+    }
+    expect(
+      within(item("A4")).getByText("Featured — not shown yet"),
+    ).toBeInTheDocument();
+    expect(within(item("A4")).queryByText("On the homepage")).toBeNull();
+    expect(within(item("A5")).queryByText(/homepage|Featured/)).toBeNull();
+  });
+
+  it("does not count a hidden featured attraction against the limit", () => {
+    renderRows([
+      featured("H1", 1, { is_published: false }),
+      featured("B1", 2),
+      featured("B2", 3),
+      featured("B3", 4),
+    ]);
+    const item = (name: string) =>
+      screen.getByText(name).closest("tr") as HTMLElement;
+    expect(within(item("B3")).getByText("On the homepage")).toBeInTheDocument();
+    expect(
+      within(item("H1")).getByText("Featured — not shown yet"),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("AttractionFormPage", () => {
   function renderForm(
     props: {
@@ -617,6 +678,9 @@ describe("AttractionFormPage", () => {
       expect(
         screen.getByRole("switch", { name: "Show on homepage" }),
       ).toHaveAttribute("aria-checked", "true");
+      expect(
+        screen.getByText(/only attractions that are on the website count/i),
+      ).toBeInTheDocument();
       await userEvent.type(screen.getByLabelText("Name"), " Park");
       expect(screen.getByLabelText("Web address")).toHaveValue(
         "beautiful-gardens",

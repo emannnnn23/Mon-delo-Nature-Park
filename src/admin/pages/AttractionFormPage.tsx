@@ -20,6 +20,7 @@ import { useToast } from "~/admin/components/Toast";
 import { useUnsavedChanges } from "~/admin/hooks/useUnsavedChanges";
 import { Button } from "~/components/common/Button";
 import { useFormDraft } from "~/hooks/useFormDraft";
+import { MAX_FEATURED_ATTRACTIONS } from "~/lib/homeContent";
 import {
   SLUG_MAX,
   SUMMARY_MAX,
@@ -520,8 +521,9 @@ export function AttractionFormPage({
               }
             />
             <p className="mt-0.5 max-w-xl text-sm text-ink-600">
-              The homepage shows up to 3 featured attractions, in the order of
-              the list.
+              The homepage shows up to {MAX_FEATURED_ATTRACTIONS} featured
+              attractions, in the order of the list. Only attractions that are
+              on the website count.
             </p>
           </div>
         ) : null}

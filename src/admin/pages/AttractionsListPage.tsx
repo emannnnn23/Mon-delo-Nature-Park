@@ -7,6 +7,7 @@ import { useToast } from "~/admin/components/Toast";
 import { applySwap, neighbour, sortRows } from "~/admin/lib/reorder";
 import { Button } from "~/components/common/Button";
 import { SampleTag } from "~/components/common/SampleTag";
+import { MAX_FEATURED_ATTRACTIONS } from "~/lib/homeContent";
 import { deleteRow, setPublished, swapOrder } from "~/services/admin/crud";
 import { toFriendlyError } from "~/services/admin/errors";
 import type { AttractionKind } from "~/types/content";
@@ -58,6 +59,15 @@ export function AttractionsListPage({ rows }: AttractionsListPageProps) {
     searchParams.get("kind") === "experience" ? "experience" : "attraction";
   const tab = TABS.find((t) => t.kind === kind) ?? TABS[0];
   const shown = current.filter((r) => r.kind === kind);
+
+  // The homepage shows the first featured attractions that are on the website,
+  // in list order (see homeContent): only those really appear there.
+  const onHomepage = new Set(
+    current
+      .filter((r) => r.kind === "attraction" && r.is_featured && r.is_published)
+      .slice(0, MAX_FEATURED_ATTRACTIONS)
+      .map((r) => r.id),
+  );
 
   // A failure message takes focus so keyboard users do not miss it.
   useEffect(() => {
@@ -216,9 +226,11 @@ export function AttractionsListPage({ rows }: AttractionsListPageProps) {
             badges: (
               <>
                 {item.is_sample ? <SampleTag /> : null}
-                {item.is_featured ? (
+                {item.kind === "attraction" && item.is_featured ? (
                   <span className="text-sm font-semibold text-earth-700">
-                    On the homepage
+                    {onHomepage.has(item.id)
+                      ? "On the homepage"
+                      : "Featured — not shown yet"}
                   </span>
                 ) : null}
               </>

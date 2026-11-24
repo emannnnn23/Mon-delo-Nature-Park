@@ -23,6 +23,7 @@ import { useToast } from "~/admin/components/Toast";
 import { useUnsavedChanges } from "~/admin/hooks/useUnsavedChanges";
 import { applySwap, neighbour, sortRows } from "~/admin/lib/reorder";
 import { Button } from "~/components/common/Button";
+import { MAX_GALLERY_IMAGES } from "~/lib/homeContent";
 import {
   deleteRow,
   insertRow,
@@ -51,9 +52,6 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "photos", label: "Photos" },
   { id: "categories", label: "Categories" },
 ];
-
-/** How many marked photos the homepage shows (see homeContent). */
-const HOMEPAGE_PHOTOS = 5;
 
 const NO_CATEGORY = "none";
 
@@ -149,7 +147,7 @@ export function GalleryPage({
   const onHomepage = new Set(
     images
       .filter((i) => i.is_featured && i.is_published)
-      .slice(0, HOMEPAGE_PHOTOS)
+      .slice(0, MAX_GALLERY_IMAGES)
       .map((i) => i.id),
   );
   const homepageState = (image: ImageRow): HomepageState =>
@@ -496,7 +494,8 @@ export function GalleryPage({
               </FormField>
             </div>
             <p className="mt-3 max-w-xl text-sm text-ink-600">
-              The homepage shows the first 5 published photos marked here.
+              The homepage shows the first {MAX_GALLERY_IMAGES} published photos
+              marked here.
             </p>
 
             {shown.length === 0 ? (

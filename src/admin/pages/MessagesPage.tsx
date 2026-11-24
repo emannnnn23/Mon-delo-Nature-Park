@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import { AdminModal } from "~/admin/components/AdminModal";
@@ -62,6 +62,18 @@ function MessageDetail({
   onDelete,
 }: DetailProps) {
   const [confirming, setConfirming] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const deleteRef = useRef<HTMLButtonElement>(null);
+  const wasConfirming = useRef(false);
+
+  // The button that was pressed is replaced by the confirm panel: move focus
+  // into the panel (on the safe choice), and back when it is dismissed.
+  useEffect(() => {
+    if (confirming) cancelRef.current?.focus();
+    else if (wasConfirming.current) deleteRef.current?.focus();
+    wasConfirming.current = confirming;
+  }, [confirming]);
+
   return (
     <AdminModal title={message.subject} onClose={onClose} busy={busy}>
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
@@ -96,6 +108,7 @@ function MessageDetail({
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
+              ref={cancelRef}
               type="button"
               disabled={busy}
               onClick={() => setConfirming(false)}
@@ -135,6 +148,7 @@ function MessageDetail({
             </button>
           )}
           <button
+            ref={deleteRef}
             type="button"
             disabled={busy}
             onClick={() => setConfirming(true)}
@@ -263,7 +277,6 @@ export function MessagesPage({ messages: initial }: MessagesPageProps) {
             <li key={m.id}>
               <button
                 type="button"
-                aria-label={`Open message from ${m.full_name}: ${m.subject}`}
                 onClick={() => handleOpen(m)}
                 className="flex min-h-11 w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl border border-cream-100 bg-white px-5 py-4 text-left hover:border-forest-900/40"
               >
@@ -274,21 +287,33 @@ export function MessagesPage({ messages: initial }: MessagesPageProps) {
                       : "text-ink-900"
                   }`}
                 >
+                  {/* The name comes from the visible words, so what a screen
+                      reader says contains what is on screen (status and date
+                      included); the hidden text only adds the action. */}
+                  <span className="sr-only">Open message from</span>{" "}
                   <span className="block">{m.full_name}</span>
+                  <span className="sr-only">:</span>{" "}
                   <span className="block text-sm font-normal text-ink-600">
                     {m.subject}
                   </span>
                 </span>
                 {m.status === "new" ? (
-                  <span className="rounded-full bg-gold-500 px-3 py-0.5 text-xs font-bold text-ink-900">
-                    New
-                  </span>
+                  <>
+                    <span className="sr-only">.</span>{" "}
+                    <span className="rounded-full bg-gold-500 px-3 py-0.5 text-xs font-bold text-ink-900">
+                      New
+                    </span>
+                  </>
                 ) : null}
                 {m.status === "archived" ? (
-                  <span className="text-xs font-semibold text-ink-600">
-                    Archived
-                  </span>
+                  <>
+                    <span className="sr-only">.</span>{" "}
+                    <span className="text-xs font-semibold text-ink-600">
+                      Archived
+                    </span>
+                  </>
                 ) : null}
+                <span className="sr-only">.</span>{" "}
                 <span className="text-sm text-ink-600">
                   {formatDate(m.submitted_at)}
                 </span>

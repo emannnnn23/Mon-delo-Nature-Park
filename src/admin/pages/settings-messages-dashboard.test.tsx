@@ -205,6 +205,57 @@ describe("MessagesPage", () => {
     expect(within(rows[1]).queryByText("New")).not.toBeInTheDocument();
   });
 
+  it("names each row with its visible words: sender, subject, status and date", () => {
+    renderPage(
+      <MessagesPage
+        messages={[
+          message("1"),
+          message("2", { status: "archived", subject: "Old question" }),
+        ]}
+      />,
+    );
+    const rows = within(
+      screen.getByRole("list", { name: "Messages" }),
+    ).getAllByRole("listitem");
+    for (const [row, visible] of [
+      [rows[0], ["Guest 1", "Question 1", "New"]],
+      [rows[1], ["Guest 2", "Old question", "Archived"]],
+    ] as const) {
+      const button = within(row).getByRole("button");
+      const date = within(row).getByText(/2026/).textContent ?? "";
+      expect(date).not.toBe("");
+      for (const word of [...visible, date]) {
+        expect(button).toHaveAccessibleName(expect.stringContaining(word));
+      }
+      expect(button).toHaveAccessibleName(
+        expect.stringMatching(/^Open message from /),
+      );
+    }
+  });
+
+  it("moves focus to Cancel when Delete is pressed, and back to Delete on Cancel", async () => {
+    vi.mocked(setMessageStatus).mockResolvedValue(
+      message("1", { status: "read" }),
+    );
+    renderPage(<MessagesPage messages={[message("1", { status: "read" })]} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: /Open message from Guest 1/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Delete" }),
+    );
+    expect(
+      within(dialog).getByRole("button", { name: "Cancel" }),
+    ).toHaveFocus();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Cancel" }),
+    );
+    expect(
+      within(dialog).getByRole("button", { name: "Delete" }),
+    ).toHaveFocus();
+  });
+
   it("shows the message as plain text and marks it read", async () => {
     vi.mocked(setMessageStatus).mockResolvedValue(
       message("1", { message: BODY, status: "read" }),

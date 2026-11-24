@@ -32,7 +32,8 @@ const blank = (value: string | null) => value === null || value.trim() === "";
 /**
  * What the owner still has to fill in, in a fixed order. Only things the site
  * leaves out when unknown (contact details, links, reviews, photos) and the
- * count of sample items still to confirm.
+ * count of sample items still to confirm. Reviews and photos count only when
+ * they are on the website: a hidden one does not fill the gap.
  */
 export function computeMissing(
   settings: SettingsRow,
@@ -115,7 +116,8 @@ export async function getDashboard(): Promise<DashboardData> {
     sampleSections,
     sampleAttractions,
     sampleImages,
-    testimonials,
+    publishedTestimonials,
+    publishedPhotos,
     settings,
     recent,
   ] = await Promise.all([
@@ -126,7 +128,8 @@ export async function getDashboard(): Promise<DashboardData> {
     count("page_sections", ["is_sample", true]),
     count("attractions", ["is_sample", true]),
     count("gallery_images", ["is_sample", true]),
-    count("testimonials"),
+    count("testimonials", ["is_published", true]),
+    count("gallery_images", ["is_published", true]),
     getSettings(),
     supabase
       .from("recent_content_updates")
@@ -159,8 +162,8 @@ export async function getDashboard(): Promise<DashboardData> {
     missing: computeMissing(
       settings,
       sampleSections + sampleAttractions + sampleImages,
-      testimonials,
-      galleryImages,
+      publishedTestimonials,
+      publishedPhotos,
     ),
   };
 }

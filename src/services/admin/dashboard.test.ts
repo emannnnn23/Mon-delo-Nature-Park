@@ -192,6 +192,24 @@ describe("getDashboard", () => {
     ]);
   });
 
+  it("counts only published reviews and photos as present, but keeps the photo tile total", async () => {
+    fake.state.counts["gallery_images"] = 5;
+    fake.state.counts["testimonials"] = 3;
+    // None of them are on the website yet.
+    const hidden = await getDashboard();
+    expect(hidden.counts.galleryImages).toBe(5);
+    expect(hidden.missing).toEqual(
+      expect.arrayContaining(["Guest reviews", "Park photos"]),
+    );
+
+    fake.state.counts["gallery_images[is_published=true]"] = 1;
+    fake.state.counts["testimonials[is_published=true]"] = 1;
+    const shown = await getDashboard();
+    expect(shown.counts.galleryImages).toBe(5);
+    expect(shown.missing).not.toContain("Guest reviews");
+    expect(shown.missing).not.toContain("Park photos");
+  });
+
   it("counts with a head request that returns no rows", async () => {
     await getDashboard();
     const counting = fake.state.queries.filter((q) =>

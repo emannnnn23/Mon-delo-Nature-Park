@@ -276,7 +276,7 @@ All tables share these conventions:
 ### 9.1 Roles
 - **Public (anon):** reads published content only, and submits the contact form through one function.
 - **Admin:** an authenticated user who has a `profiles` row with `role = 'admin'`.
-- `public.is_admin()` is a `security definer`, `stable` function with `search_path` set to empty. It returns true when that row exists for `auth.uid()`.
+- `public.is_admin()` is a `security definer`, `stable` function with `search_path` set to empty. It is session-bound: it returns true only when the request carries a live auth session. That means the token's role is `authenticated` and it is not an anonymous-user token, its `session_id` is a current row in `auth.sessions` for the same user (so signing out ends access on the next request, not when the token expires), the user is not banned or soft-deleted, and the user has a `profiles` row with `role = 'admin'`. Missing or malformed claims make it false rather than raising an error.
 - Every write policy uses `is_admin()`. The frontend route guard is only a convenience; the database is the real gate.
 
 ### 9.2 Row Level Security (enabled on every table)

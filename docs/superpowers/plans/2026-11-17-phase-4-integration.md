@@ -16,6 +16,14 @@ Everything in [README → Global Constraints](README.md#global-constraints-apply
 - **Public routes never define `HydrateFallback`.** Admin routes may.
 - **Public `clientLoader`s never call `serverLoader()` for their data.** It is used only as the failure fallback inside `loadForClient`.
 
+## Carried from Phase 3 (binding)
+- **Separate public read client.** In the same browser, a signed-in admin's session makes RLS return drafts: unpublished rows, scheduled or ended announcements, photos of unpublished attractions, and unpublished categories. Use a separate public read client with `persistSession: false`, `autoRefreshToken: false` and its own `storageKey`. Also filter explicitly on publication: `is_published`, the announcement date window, `attraction_images` only for published parents, and published categories.
+- **Shared homepage caps.** Use `MAX_FEATURED_ATTRACTIONS` (3) and `MAX_GALLERY_IMAGES` (5) from `src/lib/homeContent.ts`. Order public lists by `sort_order, created_at`, exactly as the admin does, so its "On the homepage" labels stay true.
+- **Cleared intro button.** If the admin clears the button on the homepage intro, `IntroSection` still shows "Learn More" linking to `/about`. Either hide the button or say so in the admin.
+- **Park details in Settings.** `park_name` and `tagline` appear on the public site (logo/titles and footer). Add them to Settings once they render from the database.
+- **Unpublished categories.** Decide whether photos in an unpublished category are public. Then add a "(hidden)" suffix to unpublished categories in the admin selects.
+- **Remote database push.** Migrations 0008 and 0009 must be pushed (`npx supabase db push --remote`), and the hosted JWT expiry set to 900, before the live site reads data. Then run the checks in section 6 of `docs/admin-setup.md`.
+
 ## Carried from Phase 2 (binding)
 - **Data helpers already in place.** Phase 2 routes have build-time `loader`s that return placeholder data through shared helpers: `chromeData()` in `_public.tsx`, `attractionData()` in `discover.$slug.tsx`, and `selectHomeContent()` in `src/lib/homeContent.ts`.
   - Swap the placeholders inside these helpers for the Supabase fetchers.

@@ -19,6 +19,28 @@ Everything in [README → Global Constraints](README.md#global-constraints-apply
 - **Developer-only steps** are marked **[Developer]**. The agent writes the instructions and waits; it never asks for a token, password or hook URL in chat.
 - **Dashboard labels change over time.** Confirm the current label at the time, and update the click path in `docs/admin-setup.md` if it differs.
 
+## Carried from Phase 3 (binding)
+- **`is_admin()` resilience.** If the hosted `postgres` role ever loses read access to `auth.sessions`, `is_admin()` raises an error inside the public read policies and the site goes down. Either add a smoke test after every deploy, or wrap the check in plpgsql so that `insufficient_privilege` returns false.
+- **Keep `/admin` out of search engines.** Add `Disallow: /admin` to `robots.txt` and an `X-Robots-Tag: noindex` header on the SPA fallback for `/admin/*`.
+- **Admin robustness.**
+  - When an admin's session is revoked server-side, show the "expired" message, not "no access". Read their own profile to tell the two apart.
+  - A `NO_ROWS` result caused by deletion in another tab should not say "session expired".
+  - Reordering rows that share the same `sort_order` must work (three or more tied rows).
+  - Set an explicit limit and pagination on `listMedia`, so the 1000-row cap never cuts the list silently.
+  - Add a `mailto:` reply link in Messages.
+  - Show a "Philippine time" hint on announcement times.
+- **Admin accessibility and polish.**
+  - Gallery: a banner for dirty captions hidden by the filter; re-derive a category slug that has been cleared; tile labels that don't repeat the alt text; "Unsaved" as `role=status`.
+  - Section editors: dismiss the "restored" banner after reverting; check the number of landmarks.
+  - Attractions: a name made only of symbols should leave the slug empty; tabs should not share one `aria-controls`.
+  - Announcements: clear dependent field errors when a related field changes; refresh status chips on a timer.
+  - Dashboard: structured links for missing items.
+  - FocalPointPicker: add range inputs.
+  - Media library: block or announce closing the upload panel mid-upload.
+  - Media: before rollback, check whether the row already exists.
+  - Shared: make the `guardSuspended` counter work; CrudList refocus timing; PublishToggle accessible name.
+  - pgTAP: negative update tests for tab characters and `//` links.
+
 ## Carried from Phase 2 (binding)
 - **Content Security Policy.** Components use inline `style` attributes: `objectPosition`, animation delays, gallery `aspectRatio` and the star widths. The CSP must allow style attributes, either through `style-src-attr 'unsafe-inline'` or as part of the planned `style-src 'unsafe-inline'`.
 - **Accessibility polish.**

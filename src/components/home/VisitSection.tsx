@@ -1,6 +1,7 @@
 import { Mail, MapPin, Phone } from "lucide-react";
 import { DirectionsButton, MapsCard } from "../common/MapsCard";
 import { MapEmbed } from "../common/MapEmbed";
+import { isGoogleEmbed } from "../../lib/maps";
 import { Reveal } from "../common/Reveal";
 import { SectionHeading } from "../common/SectionHeading";
 import type { PageSection, SiteSettings } from "../../types/content";
@@ -19,7 +20,7 @@ const contactClass =
  */
 export function VisitSection({ section, settings }: VisitSectionProps) {
   const { addressLine, phone, email, mapsEmbedUrl } = settings;
-  const showAddress = Boolean(mapsEmbedUrl);
+  const showAddress = isGoogleEmbed(mapsEmbedUrl);
   const hasDetails = showAddress || Boolean(phone) || Boolean(email);
   // With only a heading for the left column, stack it over the card rather
   // than leave a bare heading beside it.
@@ -76,14 +77,14 @@ export function VisitSection({ section, settings }: VisitSectionProps) {
               ) : null}
             </address>
           ) : null}
-          {mapsEmbedUrl ? (
+          {showAddress ? (
             <div className="mt-8">
               <DirectionsButton settings={settings} />
             </div>
           ) : null}
         </div>
 
-        {mapsEmbedUrl ? (
+        {showAddress ? (
           <MapEmbed
             src={mapsEmbedUrl}
             title={`Map showing ${settings.parkName}`}

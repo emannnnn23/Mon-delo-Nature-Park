@@ -20,6 +20,7 @@ import {
 } from "~/services/admin/crud";
 import { toFriendlyError } from "~/services/admin/errors";
 import type { Row } from "~/types/db-helpers";
+import { toDateTimeLocal } from "~/utils/dates";
 
 type AnnouncementRow = Row<"announcements">;
 
@@ -51,6 +52,21 @@ function columns(data: AnnouncementInput) {
     link_href: data.linkHref,
     starts_at: data.startsAt,
     ends_at: data.endsAt,
+  };
+}
+
+/**
+ * The columns for editing a saved row. The form shows times only to the
+ * minute, so writing them back would round away stored seconds: a time is sent
+ * only when the form value differs from what the row shows.
+ */
+function editColumns(data: AnnouncementInput, row: AnnouncementRow) {
+  const { starts_at, ends_at, ...rest } = columns(data);
+  const local = (iso: string | null) => (iso ? toDateTimeLocal(iso) : "");
+  return {
+    ...rest,
+    ...(local(starts_at) !== local(row.starts_at) ? { starts_at } : {}),
+    ...(local(ends_at) !== local(row.ends_at) ? { ends_at } : {}),
   };
 }
 
@@ -122,7 +138,7 @@ export function AnnouncementsPage({
       const updated = await updateRow(
         "announcements",
         editing.id,
-        columns(data),
+        editColumns(data, editing),
       );
       change((cur) => cur.map((a) => (a.id === updated.id ? updated : a)));
       toast.success("Announcement saved.");

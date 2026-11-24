@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, createRoutesStub } from "react-router";
 
@@ -531,6 +538,82 @@ describe("AnnouncementsPage", () => {
     );
     expect(field("Starts")).toHaveValue("2026-12-01T09:30");
     expect(field(/^Ends/)).toHaveValue("");
+  });
+
+  describe("editing keeps stored instants unless the owner changes them", () => {
+    // Stored to the second and millisecond: a form shows only whole minutes.
+    const stored = announcement("7", {
+      title: "Planned works",
+      starts_at: "2026-12-01T01:30:45.123Z",
+      ends_at: "2026-12-02T10:00:30.500Z",
+    });
+
+    beforeEach(() => {
+      vi.mocked(updateRow).mockImplementation((async (
+        _t: string,
+        id: string,
+        v: object,
+      ) => ({
+        ...stored,
+        id,
+        ...v,
+      })) as never);
+    });
+
+    async function openStored() {
+      renderPage(<AnnouncementsPage announcements={[stored]} />);
+      await userEvent.click(
+        screen.getByRole("button", { name: "Edit Planned works" }),
+      );
+    }
+
+    it("does not send the times when only the title changed", async () => {
+      await openStored();
+      await userEvent.type(field("Title"), " today");
+      await userEvent.click(
+        within(dialog()).getByRole("button", { name: "Save" }),
+      );
+      await waitFor(() => expect(updateRow).toHaveBeenCalledTimes(1));
+      const values = vi.mocked(updateRow).mock.calls[0][2] as Record<
+        string,
+        unknown
+      >;
+      expect(values).toMatchObject({ title: "Planned works today" });
+      expect(values).not.toHaveProperty("starts_at");
+      expect(values).not.toHaveProperty("ends_at");
+    });
+
+    it("sends only the time that was changed", async () => {
+      await openStored();
+      fireEvent.change(field("Starts"), {
+        target: { value: "2026-12-01T10:00" },
+      });
+      await userEvent.click(
+        within(dialog()).getByRole("button", { name: "Save" }),
+      );
+      await waitFor(() => expect(updateRow).toHaveBeenCalledTimes(1));
+      const values = vi.mocked(updateRow).mock.calls[0][2] as Record<
+        string,
+        unknown
+      >;
+      expect(values.starts_at).toBe("2026-12-01T02:00:00.000Z");
+      expect(values).not.toHaveProperty("ends_at");
+    });
+
+    it("clears the end when the owner empties it", async () => {
+      await openStored();
+      fireEvent.change(field(/^Ends/), { target: { value: "" } });
+      await userEvent.click(
+        within(dialog()).getByRole("button", { name: "Save" }),
+      );
+      await waitFor(() => expect(updateRow).toHaveBeenCalledTimes(1));
+      const values = vi.mocked(updateRow).mock.calls[0][2] as Record<
+        string,
+        unknown
+      >;
+      expect(values.ends_at).toBe("");
+      expect(values).not.toHaveProperty("starts_at");
+    });
   });
 
   it("switches an announcement on", async () => {

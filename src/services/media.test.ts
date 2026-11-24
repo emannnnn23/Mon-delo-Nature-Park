@@ -165,7 +165,11 @@ describe("uploadImage", () => {
   it("encodes each planned width, uploads it, then inserts the media row", async () => {
     const row = mediaRow();
     queue("media", ok(row));
-    const result = await uploadImage(jpeg(), "  Blue lagoon  ", "gallery");
+    const result = await uploadImage(
+      jpeg("IMG_4821 Maria Santos.JPG"),
+      "  Blue lagoon  ",
+      "gallery",
+    );
 
     expect(result).toBe(row);
     expect(fake.state.uploads).toHaveLength(4);
@@ -195,10 +199,35 @@ describe("uploadImage", () => {
       width: 3000,
       height: 2000,
       alt_text: "Blue lagoon",
-      original_filename: "Blue Lagoon.JPG",
+      original_filename: null,
     });
+    expect(
+      JSON.stringify([...fake.state.uploads.map((u) => u.path), values]),
+    ).not.toMatch(/maria|santos|img_4821|img-4821/i);
     expect(bitmap.close).toHaveBeenCalled();
     expect(fake.state.removed).toEqual([]);
+  });
+
+  it("names the stored files after the description, not the file name", async () => {
+    queue("media", ok(mediaRow()));
+    await uploadImage(
+      jpeg("DSC 0042 juan.jpg"),
+      "Sunrise at the falls",
+      "gallery",
+    );
+    expect(fake.state.uploads[0].path).toMatch(
+      /^\d{4}\/sunrise-at-the-falls-[a-z0-9]{6}-480\.webp$/,
+    );
+  });
+
+  it("falls back to the file name words only when the description has no usable letters", async () => {
+    queue("media", ok(mediaRow()));
+    await uploadImage(jpeg("blue_lagoon.jpg"), "湖の景色", "gallery");
+    expect(fake.state.uploads[0].path).toMatch(
+      /^\d{4}\/blue-lagoon-[a-z0-9]{6}-480\.webp$/,
+    );
+    const values = insertCall()?.args[0] as Record<string, unknown>;
+    expect(values.original_filename).toBeNull();
   });
 
   it("uses the .jpg extension in the key when the browser fell back to JPEG", async () => {

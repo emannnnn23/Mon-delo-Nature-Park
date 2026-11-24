@@ -2,7 +2,7 @@ import { getSupabase } from "~/lib/supabase";
 import type { MediaRow } from "~/types/db-helpers";
 import { encodeVariant, validateImageFile } from "~/utils/encodeImage";
 import { buildMediaPath, planVariantWidths } from "~/utils/mediaPath";
-import { shortId, slugify } from "~/utils/slug";
+import { shortId, slugify, wordsFromFilename } from "~/utils/slug";
 
 import {
   AdminError,
@@ -98,6 +98,17 @@ async function removeObjects(paths: string[]): Promise<boolean> {
 }
 
 /**
+ * The readable part of a storage key. Built from the description the owner
+ * typed, never from the file name (which can carry names, dates or a device
+ * id and would sit in a public URL). The file name's words are used only when
+ * the description has no letters or digits that survive as ASCII.
+ */
+function storageSlug(alt: string, fileName: string): string {
+  const hasUsable = /[a-z0-9]/i.test(alt.normalize("NFKD").replace(/[̀-ͯ]/g, ""));
+  return slugify(hasUsable ? alt : wordsFromFilename(fileName));
+}
+
+/**
  * Prepares a chosen photo in the browser (several widths, WebP, no EXIF or GPS)
  * and stores it: every size goes to the `media` bucket, then one `media` row
  * points at them. If anything fails, files already uploaded are removed again
@@ -148,8 +159,7 @@ export async function uploadImage(
 
     const widths = planVariantWidths(dims.width);
     const year = new Date().getFullYear();
-    const name = file.name.replace(/\.[a-z0-9]{1,5}$/i, "");
-    const slug = slugify(name);
+    const slug = storageSlug(alt, file.name);
     const id = shortId();
     const variants: Record<string, string> = {};
 
@@ -205,7 +215,9 @@ export async function uploadImage(
           width: dims.width,
           height: dims.height,
           variants,
-          original_filename: file.name,
+          // The camera's file name can hold a person's name or a date; it is
+          // not kept (the column is nullable).
+          original_filename: null,
         })
         .select()
         .single(),

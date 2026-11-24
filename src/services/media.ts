@@ -2,7 +2,7 @@ import { getSupabase } from "~/lib/supabase";
 import type { MediaRow } from "~/types/db-helpers";
 import { encodeVariant, validateImageFile } from "~/utils/encodeImage";
 import { buildMediaPath, planVariantWidths } from "~/utils/mediaPath";
-import { shortId, slugify, wordsFromFilename } from "~/utils/slug";
+import { shortId, slugify } from "~/utils/slug";
 
 import {
   AdminError,
@@ -100,12 +100,11 @@ async function removeObjects(paths: string[]): Promise<boolean> {
 /**
  * The readable part of a storage key. Built from the description the owner
  * typed, never from the file name (which can carry names, dates or a device
- * id and would sit in a public URL). The file name's words are used only when
- * the description has no letters or digits that survive as ASCII.
+ * id and would sit in a public URL). A description with no letters or digits
+ * that survive as ASCII becomes "image" (slugify's fallback).
  */
-function storageSlug(alt: string, fileName: string): string {
-  const hasUsable = /[a-z0-9]/i.test(alt.normalize("NFKD").replace(/[̀-ͯ]/g, ""));
-  return slugify(hasUsable ? alt : wordsFromFilename(fileName));
+function storageSlug(alt: string): string {
+  return slugify(alt);
 }
 
 /**
@@ -159,7 +158,7 @@ export async function uploadImage(
 
     const widths = planVariantWidths(dims.width);
     const year = new Date().getFullYear();
-    const slug = storageSlug(alt, file.name);
+    const slug = storageSlug(alt);
     const id = shortId();
     const variants: Record<string, string> = {};
 

@@ -162,6 +162,19 @@ const insertCall = () =>
   fake.state.calls.find((c) => c.table === "media" && c.op === "insert");
 
 describe("uploadImage", () => {
+  it("never puts file-name words in the key, even when the description has no ASCII", async () => {
+    queue("media", ok(mediaRow()));
+    await uploadImage(jpeg("IMG_4821 Maria Santos.JPG"), "海の景色", "gallery");
+
+    const year = new Date().getFullYear();
+    for (const upload of fake.state.uploads) {
+      expect(upload.path).toMatch(
+        new RegExp(`^${year}/image-[a-z0-9]{6}-\\d+\\.webp$`),
+      );
+      expect(upload.path).not.toMatch(/maria|santos|img|4821/i);
+    }
+  });
+
   it("encodes each planned width, uploads it, then inserts the media row", async () => {
     const row = mediaRow();
     queue("media", ok(row));
@@ -220,11 +233,11 @@ describe("uploadImage", () => {
     );
   });
 
-  it("falls back to the file name words only when the description has no usable letters", async () => {
+  it("never stores the original file name, even when the description has no ASCII", async () => {
     queue("media", ok(mediaRow()));
     await uploadImage(jpeg("blue_lagoon.jpg"), "湖の景色", "gallery");
     expect(fake.state.uploads[0].path).toMatch(
-      /^\d{4}\/blue-lagoon-[a-z0-9]{6}-480\.webp$/,
+      /^\d{4}\/image-[a-z0-9]{6}-480\.webp$/,
     );
     const values = insertCall()?.args[0] as Record<string, unknown>;
     expect(values.original_filename).toBeNull();

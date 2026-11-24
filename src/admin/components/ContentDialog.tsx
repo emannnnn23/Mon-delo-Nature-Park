@@ -8,7 +8,14 @@ type ContentDialogProps = {
   title: string;
   form: Pick<
     ContentForm<object, string>,
-    "busy" | "restored" | "message" | "formRef" | "messageRef" | "submit"
+    | "busy"
+    | "restored"
+    | "message"
+    | "formRef"
+    | "messageRef"
+    | "submit"
+    | "dropDraft"
+    | "discardDraft"
   >;
   onClose: () => void;
   children: ReactNode;
@@ -16,7 +23,9 @@ type ContentDialogProps = {
 
 /**
  * The frame of an add/edit dialog driven by `useContentForm`: the notice that
- * a draft was restored, a failure message, the fields, then Save and Cancel.
+ * a draft was restored (with a way to discard it), a failure message, the
+ * fields, then Save and Cancel. Cancel throws the draft away; closing with
+ * Escape, the backdrop or the close button keeps it for next time.
  */
 export function ContentDialog({
   title,
@@ -24,7 +33,16 @@ export function ContentDialog({
   onClose,
   children,
 }: ContentDialogProps) {
-  const { busy, restored, message, formRef, messageRef, submit } = form;
+  const {
+    busy,
+    restored,
+    message,
+    formRef,
+    messageRef,
+    submit,
+    dropDraft,
+    discardDraft,
+  } = form;
   return (
     <AdminModal title={title} busy={busy} onClose={onClose}>
       <form
@@ -34,10 +52,20 @@ export function ContentDialog({
         className="flex flex-col gap-5"
       >
         {restored ? (
-          <p role="status" className="font-semibold text-earth-700">
-            We restored your unsaved changes from this device. Save to keep
-            them.
-          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p role="status" className="font-semibold text-earth-700">
+              We restored your unsaved changes from this device. Save to keep
+              them.
+            </p>
+            <Button
+              type="button"
+              variant="outline-dark"
+              disabled={busy}
+              onClick={discardDraft}
+            >
+              Discard draft
+            </Button>
+          </div>
         ) : null}
         {message ? (
           <p
@@ -58,7 +86,10 @@ export function ContentDialog({
             type="button"
             variant="outline-dark"
             disabled={busy}
-            onClick={onClose}
+            onClick={() => {
+              dropDraft();
+              onClose();
+            }}
           >
             Cancel
           </Button>

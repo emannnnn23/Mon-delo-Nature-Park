@@ -53,6 +53,13 @@ export type ContentForm<V, F extends string> = {
   formRef: RefObject<HTMLFormElement | null>;
   messageRef: RefObject<HTMLParagraphElement | null>;
   submit: (event: FormEvent) => void;
+  /**
+   * Removes the kept draft but leaves the form as it is. For an explicit
+   * Cancel, just before the dialog closes: Escape and the backdrop keep it.
+   */
+  dropDraft: () => void;
+  /** Throws away the restored draft and goes back to the starting values. */
+  discardDraft: () => void;
 };
 
 /**
@@ -79,7 +86,15 @@ export function useContentForm<V extends object, D, F extends string>({
 
   const { clear, restored } = useFormDraft(draftKey, values, setValues);
 
-  const [startingPoint] = useState(() => JSON.stringify(initial));
+  const [startingPoint, setStartingPoint] = useState(() =>
+    JSON.stringify(initial),
+  );
+  // The newest starting values: a new announcement's start time is "now", so
+  // a discard should start from the current moment, not from when it opened.
+  const latestInitial = useRef(initial);
+  useEffect(() => {
+    latestInitial.current = initial;
+  });
   const isDirty = useMemo(
     () => JSON.stringify(values) !== startingPoint,
     [values, startingPoint],
@@ -107,6 +122,23 @@ export function useContentForm<V extends object, D, F extends string>({
       cur[field as unknown as F] ? { ...cur, [field]: undefined } : cur,
     );
   }, []);
+
+  function dropDraft() {
+    clear();
+  }
+
+  function discardDraft() {
+    const fresh = latestInitial.current;
+    clear(fresh);
+    setValues(fresh);
+    setStartingPoint(JSON.stringify(fresh));
+    setErrors({});
+    setMessage(null);
+    // The notice (and its button) is about to go: keep focus in the form.
+    formRef.current
+      ?.querySelector<HTMLElement>("input, textarea, select")
+      ?.focus();
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -139,5 +171,7 @@ export function useContentForm<V extends object, D, F extends string>({
     formRef,
     messageRef,
     submit: (event) => void handleSubmit(event),
+    dropDraft,
+    discardDraft,
   };
 }

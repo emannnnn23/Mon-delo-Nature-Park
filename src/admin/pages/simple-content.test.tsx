@@ -20,6 +20,7 @@ import {
 } from "~/services/admin/crud";
 import { AdminError } from "~/services/admin/errors";
 import type { Row } from "~/types/db-helpers";
+import { toDateTimeLocal } from "~/utils/dates";
 
 import { AnnouncementsPage } from "./AnnouncementsPage";
 import { FaqsPage } from "./FaqsPage";
@@ -613,6 +614,104 @@ describe("AnnouncementsPage", () => {
       >;
       expect(values.ends_at).toBe("");
       expect(values).not.toHaveProperty("starts_at");
+    });
+  });
+
+  describe("kept drafts", () => {
+    const KEY = "mondelos-admin-draft:announcement:";
+    const notice = () => within(dialog()).queryByRole("status");
+    const addButton = () =>
+      screen.getByRole("button", { name: "Add announcement" });
+
+    async function openNewAndType() {
+      renderPage(<AnnouncementsPage announcements={[live, ended]} />);
+      await userEvent.click(addButton());
+      await userEvent.type(field("Title"), "Road works");
+    }
+
+    it("keeps the draft on Escape and restores it next time", async () => {
+      await openNewAndType();
+      await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(sessionStorage.getItem(`${KEY}new`)).not.toBeNull();
+      await userEvent.click(addButton());
+      expect(field("Title")).toHaveValue("Road works");
+      expect(notice()).toHaveTextContent("We restored your unsaved changes");
+    });
+
+    it("keeps the draft when the backdrop is clicked", async () => {
+      await openNewAndType();
+      const backdrop = document.querySelector<HTMLElement>(
+        '.fixed [aria-hidden="true"].absolute',
+      ) as HTMLElement;
+      await userEvent.click(backdrop);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(sessionStorage.getItem(`${KEY}new`)).not.toBeNull();
+    });
+
+    it("drops the draft on an explicit Cancel", async () => {
+      await openNewAndType();
+      await userEvent.click(
+        within(dialog()).getByRole("button", { name: "Cancel" }),
+      );
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(sessionStorage.getItem(`${KEY}new`)).toBeNull();
+      await userEvent.click(addButton());
+      expect(field("Title")).toHaveValue("");
+      expect(notice()).toBeNull();
+    });
+
+    it("lets the owner discard a restored draft, with a fresh start time", async () => {
+      sessionStorage.setItem(
+        `${KEY}new`,
+        JSON.stringify({ title: "Old news", startsAt: "2020-01-01T08:00" }),
+      );
+      renderPage(<AnnouncementsPage announcements={[live]} />);
+      await userEvent.click(addButton());
+      expect(field("Title")).toHaveValue("Old news");
+      expect(field("Starts")).toHaveValue("2020-01-01T08:00");
+      await userEvent.click(
+        within(dialog()).getByRole("button", { name: "Discard draft" }),
+      );
+      expect(field("Title")).toHaveValue("");
+      expect(notice()).toBeNull();
+      expect(sessionStorage.getItem(`${KEY}new`)).toBeNull();
+      const today = toDateTimeLocal(new Date().toISOString()).slice(0, 10);
+      expect(String((field("Starts") as HTMLInputElement).value)).toMatch(
+        new RegExp(`^${today}T`),
+      );
+      // Back at the starting point, so nothing counts as unsaved.
+      fireEvent.click(screen.getByText("Elsewhere"));
+      expect(
+        screen.queryByRole("heading", { name: "Leave without saving?" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("scopes a draft to its own row: not shown for another row or a new one", async () => {
+      sessionStorage.setItem(
+        `${KEY}${live.id}`,
+        JSON.stringify({ title: "Draft for A" }),
+      );
+      renderPage(<AnnouncementsPage announcements={[live, ended]} />);
+      await userEvent.click(
+        screen.getByRole("button", { name: "Edit Typhoon closure" }),
+      );
+      expect(field("Title")).toHaveValue("Typhoon closure");
+      expect(notice()).toBeNull();
+      await userEvent.click(
+        within(dialog()).getByRole("button", { name: "Close" }),
+      );
+      await userEvent.click(addButton());
+      expect(field("Title")).toHaveValue("");
+      expect(notice()).toBeNull();
+      await userEvent.click(
+        within(dialog()).getByRole("button", { name: "Close" }),
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: "Edit Open as usual" }),
+      );
+      expect(field("Title")).toHaveValue("Draft for A");
+      expect(notice()).toHaveTextContent("We restored your unsaved changes");
     });
   });
 

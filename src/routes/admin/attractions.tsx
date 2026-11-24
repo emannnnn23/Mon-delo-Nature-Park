@@ -1,6 +1,7 @@
 import { useRouteError } from "react-router";
 
 import { AttractionsListPage } from "~/admin/pages/AttractionsListPage";
+import { skipSearchOnlyRevalidation } from "~/admin/lib/revalidate";
 import { listRows } from "~/services/admin/crud";
 import { toFriendlyError } from "~/services/admin/errors";
 import type { Route } from "./+types/attractions";
@@ -15,6 +16,11 @@ export function meta() {
 export async function clientLoader() {
   return { rows: await listRows("attractions") };
 }
+
+// Tabs and filters live in the query string; the page keeps what it loaded, so
+// a search-only change must not re-run the loader (and risk blanking the page
+// on a transient failure).
+export const shouldRevalidate = skipSearchOnlyRevalidation;
 
 export default function Attractions({ loaderData }: Route.ComponentProps) {
   return <AttractionsListPage rows={loaderData.rows} />;

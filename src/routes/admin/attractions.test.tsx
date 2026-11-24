@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { createRoutesStub, data } from "react-router";
+import userEvent from "@testing-library/user-event";
+import { Link, createRoutesStub, data } from "react-router";
 
 import { getRow, listRows } from "~/services/admin/crud";
 import { AdminError } from "~/services/admin/errors";
@@ -8,6 +9,7 @@ import { listMedia } from "~/services/media";
 import {
   ErrorBoundary as ListBoundary,
   clientLoader as listLoader,
+  shouldRevalidate as listShouldRevalidate,
 } from "./attractions";
 import {
   ErrorBoundary as FormBoundary,
@@ -145,5 +147,25 @@ describe("admin attractions ErrorBoundary", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Your session has expired",
     );
+  });
+});
+
+describe("admin attractions list shouldRevalidate", () => {
+  it("does not load again when only the tab changes", async () => {
+    const loader = vi.fn(async () => ({}));
+    const Stub = createRoutesStub([
+      {
+        path: "/admin/attractions",
+        loader,
+        shouldRevalidate: listShouldRevalidate,
+        Component: () => (
+          <Link to="/admin/attractions?tab=experience">Tab</Link>
+        ),
+      },
+    ]);
+    render(<Stub initialEntries={["/admin/attractions"]} />);
+    await userEvent.click(await screen.findByRole("link", { name: "Tab" }));
+    await screen.findByRole("link", { name: "Tab" });
+    expect(loader).toHaveBeenCalledTimes(1);
   });
 });

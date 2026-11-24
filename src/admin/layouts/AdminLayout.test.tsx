@@ -118,6 +118,43 @@ describe("AdminLayout sign-out with unsaved changes", () => {
   });
 });
 
+describe("AdminLayout sign-out dialog wording and failure", () => {
+  it("says the unsaved changes will be discarded, not kept", async () => {
+    renderLayout();
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Sign out" })[0],
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Sign out without saving?",
+    });
+    expect(
+      within(dialog).getByText("Your unsaved changes will be discarded."),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/draft/i)).not.toBeInTheDocument();
+  });
+
+  it("logs and shows a friendly toast when signing out fails", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(signOut).mockRejectedValue(new Error("boom"));
+    renderLayout();
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Sign out" })[0],
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Sign out without saving?",
+    });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Sign out" }),
+    );
+    expect(
+      await screen.findByText(/couldn.t sign you out/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("boom")).not.toBeInTheDocument();
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
+  });
+});
+
 describe("AdminLayout sign-out and saved drafts", () => {
   const DRAFT = "mondelos-admin-draft:attraction:1";
   const OTHER = "unrelated-key";

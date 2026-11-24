@@ -9,7 +9,7 @@ import { useSession } from "~/hooks/useSession";
 import { signOut } from "~/services/auth";
 
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { Toast, dismissAllToasts } from "../components/Toast";
+import { Toast, dismissAllToasts, useToast } from "../components/Toast";
 import {
   hasUnsavedChanges,
   withUnsavedGuardSuspended,
@@ -152,6 +152,16 @@ export function AdminLayout({ email }: AdminLayoutProps) {
   useSession();
 
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const toast = useToast();
+
+  // Never an unhandled rejection: a failed sign-out is logged, and the owner
+  // is told in plain words and stays on the page (their drafts untouched).
+  function startSignOut() {
+    finishSignOut().catch((e: unknown) => {
+      console.error("Sign out failed", e);
+      toast.error("Couldn't sign you out. Please try again.");
+    });
+  }
 
   async function finishSignOut() {
     dismissAllToasts();
@@ -177,7 +187,7 @@ export function AdminLayout({ email }: AdminLayoutProps) {
       setConfirmingSignOut(true);
       return;
     }
-    void finishSignOut();
+    startSignOut();
   }
 
   return (
@@ -234,14 +244,14 @@ export function AdminLayout({ email }: AdminLayoutProps) {
       <ConfirmDialog
         open={confirmingSignOut}
         title="Sign out without saving?"
-        body="Your changes are kept as a draft on this device."
+        body="Your unsaved changes will be discarded."
         confirmLabel="Sign out"
         cancelLabel="Stay"
         destructive
         onCancel={() => setConfirmingSignOut(false)}
         onConfirm={() => {
           setConfirmingSignOut(false);
-          void finishSignOut();
+          startSignOut();
         }}
       />
 

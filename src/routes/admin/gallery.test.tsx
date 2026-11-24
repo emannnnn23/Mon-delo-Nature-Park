@@ -1,11 +1,12 @@
 import { render, screen } from "@testing-library/react";
-import { createRoutesStub } from "react-router";
+import userEvent from "@testing-library/user-event";
+import { Link, createRoutesStub } from "react-router";
 
 import { listRows } from "~/services/admin/crud";
 import { AdminError } from "~/services/admin/errors";
 import { listMedia } from "~/services/media";
 
-import { ErrorBoundary, clientLoader } from "./gallery";
+import { ErrorBoundary, clientLoader, shouldRevalidate } from "./gallery";
 
 vi.mock("~/services/admin/crud", () => ({ listRows: vi.fn() }));
 vi.mock("~/services/media", () => ({ listMedia: vi.fn() }));
@@ -66,5 +67,29 @@ describe("admin gallery ErrorBoundary", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Your session has expired.",
     );
+  });
+});
+
+describe("admin gallery shouldRevalidate", () => {
+  it("does not load again when only the tab or filter changes, but does for another page", async () => {
+    const loader = vi.fn(async () => ({}));
+    const Stub = createRoutesStub([
+      {
+        path: "/admin/gallery",
+        loader,
+        shouldRevalidate,
+        Component: () => (
+          <>
+            <Link to="/admin/gallery?category=x">Filter</Link>
+            <Link to="/admin/elsewhere">Away</Link>
+          </>
+        ),
+      },
+      { path: "/admin/elsewhere", Component: () => <p>Elsewhere</p> },
+    ]);
+    render(<Stub initialEntries={["/admin/gallery"]} />);
+    await userEvent.click(await screen.findByRole("link", { name: "Filter" }));
+    await screen.findByRole("link", { name: "Filter" });
+    expect(loader).toHaveBeenCalledTimes(1);
   });
 });

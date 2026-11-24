@@ -257,7 +257,23 @@ function renderAdmin(
       Component: withLoaderData(layout.default),
       ErrorBoundary: LayoutError,
       children: [
-        { index: true, Component: dashboard.default as never },
+        {
+          index: true,
+          // The real loader reads Supabase; the page gets its data here.
+          loader: async () => ({
+            dashboard: {
+              counts: {
+                publishedAttractions: 0,
+                galleryImages: 0,
+                publishedAnnouncements: 0,
+                newMessages: 0,
+              },
+              recent: [],
+              missing: [],
+            },
+          }),
+          Component: dashboard.default as never,
+        },
         {
           path: "attractions",
           loader: childLoader,

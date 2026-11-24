@@ -29,7 +29,9 @@ export default [
     route("admin/testimonials", "routes/admin/testimonials.tsx"),
     route("admin/announcements", "routes/admin/announcements.tsx"),
     route("admin/faqs", "routes/admin/faqs.tsx"),
+    route("admin/messages", "routes/admin/messages.tsx"),
     route("admin/media", "routes/admin/media.tsx"),
+    route("admin/settings", "routes/admin/settings.tsx"),
     route("admin/*", "routes/admin/not-found.tsx"),
   ]),
 ] satisfies RouteConfig;

@@ -6,6 +6,7 @@ import {
 } from "../components/forms/ContactForm";
 import { DirectionsButton, MapsCard } from "../components/common/MapsCard";
 import { MapEmbed } from "../components/common/MapEmbed";
+import { isGoogleEmbed } from "../lib/maps";
 import { PageHeader } from "../components/common/PageHeader";
 import { SampleTag } from "../components/common/SampleTag";
 import { SectionHeading } from "../components/common/SectionHeading";
@@ -70,7 +71,7 @@ export function VisitPage({
     .filter((s): s is PageSection => s !== undefined);
   // Without an embed URL the Google Maps card shows the plus code and
   // address, so they are not repeated here.
-  const showAddress = Boolean(mapsEmbedUrl);
+  const showAddress = isGoogleEmbed(mapsEmbedUrl);
   const hasContact = Boolean(phone) || Boolean(email) || Boolean(openingHours);
   const showPlusCode = plusCode !== null && !addressLine.includes(plusCode);
   const hasFaqs = faqs.length > 0;
@@ -157,7 +158,7 @@ export function VisitPage({
                   </div>
                 ) : null}
 
-                {mapsEmbedUrl ? (
+                {showAddress ? (
                   <div className="mt-2">
                     <DirectionsButton settings={settings} />
                   </div>
@@ -167,7 +168,7 @@ export function VisitPage({
           </div>
 
           <div className="lg:sticky lg:top-28 lg:self-start">
-            {mapsEmbedUrl ? (
+            {showAddress ? (
               <MapEmbed
                 src={mapsEmbedUrl}
                 title={`Map showing ${settings.parkName}`}

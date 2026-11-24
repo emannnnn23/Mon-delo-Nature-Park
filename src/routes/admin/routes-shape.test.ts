@@ -36,7 +36,9 @@ describe("src/routes.ts", () => {
       "admin/testimonials",
       "admin/announcements",
       "admin/faqs",
+      "admin/messages",
       "admin/media",
+      "admin/settings",
       "admin/*",
     ]);
   });

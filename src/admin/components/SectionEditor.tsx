@@ -150,7 +150,16 @@ export function SectionEditor({
   async function handleSave(event: FormEvent) {
     event.preventDefault();
     setMessage(null);
-    const parsed = pageSectionSchema.safeParse(values);
+    // Check only what the owner can see: a field the form does not offer
+    // (and so cannot fix) is passed as empty, which always validates, and is
+    // never written.
+    const parsed = pageSectionSchema.safeParse({
+      eyebrow: offered("eyebrow") ? values.eyebrow : "",
+      heading: offered("heading") ? values.heading : "",
+      body: offered("body") ? values.body : "",
+      ctaLabel: offered("button") ? values.ctaLabel : "",
+      ctaHref: offered("button") ? values.ctaHref : "",
+    });
     if (!parsed.success) {
       const next: FieldErrors = {};
       for (const issue of parsed.error.issues) {

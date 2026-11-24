@@ -193,6 +193,40 @@ describe("saving only what is offered", () => {
     expect(values).not.toHaveProperty("cta_href");
   });
 
+  it("is not blocked by a hidden button label that is only a non-breaking space", async () => {
+    renderPage("home", [
+      section("home", "hero", {
+        heading: "Find Your Peace",
+        cta_label: "\u00a0",
+        cta_href: "/visit",
+      }),
+    ]);
+    const region = screen.getByRole("region", { name: /Top banner/ });
+    await userEvent.type(within(region).getByLabelText("Title"), "!");
+    await userEvent.click(
+      within(region).getByRole("button", { name: "Save changes" }),
+    );
+    expect(updateRow).toHaveBeenCalledTimes(1);
+    expect(within(region).queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("still checks the button pair for a section that offers a button", async () => {
+    renderPage("home", [
+      section("home", "intro", { cta_label: "Learn More", cta_href: "/about" }),
+    ]);
+    const region = await openSection("Welcome introduction");
+    await userEvent.clear(within(region).getByLabelText("Button link"));
+    await userEvent.click(
+      within(region).getByRole("button", { name: "Save changes" }),
+    );
+    expect(updateRow).not.toHaveBeenCalled();
+    expect(
+      within(region).getByText(
+        "Add both a button label and a link, or leave both empty.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("sends the button columns only for a section that offers a button", async () => {
     renderPage("home", [
       section("home", "intro", { cta_label: "Learn More", cta_href: "/about" }),

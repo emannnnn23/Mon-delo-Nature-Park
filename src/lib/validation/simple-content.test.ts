@@ -122,10 +122,9 @@ describe("announcementSchema", () => {
       endsAt: "2026-12-02T09:00",
     });
     expect(result.success).toBe(true);
-    expect(result.data?.startsAt).toBe(
-      new Date(2026, 11, 1, 9, 0).toISOString(),
-    );
-    expect(result.data?.endsAt).toBe(new Date(2026, 11, 2, 9, 0).toISOString());
+    // 09:00 in Asia/Manila (UTC+8, pinned in the test setup) is 01:00 UTC.
+    expect(result.data?.startsAt).toBe("2026-12-01T01:00:00.000Z");
+    expect(result.data?.endsAt).toBe("2026-12-02T01:00:00.000Z");
   });
 
   it("rejects an end before the start", () => {

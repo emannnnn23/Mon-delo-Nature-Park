@@ -508,20 +508,20 @@ describe("AnnouncementsPage", () => {
       body: "",
       link_label: "Details",
       link_href: "/visit",
-      starts_at: new Date(2026, 11, 1, 9, 0).toISOString(),
-      ends_at: new Date(2026, 11, 2, 18, 30).toISOString(),
+      // Asia/Manila is UTC+8 (pinned in the test setup).
+      starts_at: "2026-12-01T01:00:00.000Z",
+      ends_at: "2026-12-02T10:30:00.000Z",
       is_published: false,
     });
   });
 
   it("shows stored times in local time when editing", async () => {
-    const start = new Date(2026, 11, 1, 9, 30);
     renderPage(
       <AnnouncementsPage
         announcements={[
           announcement("5", {
             title: "Planned works",
-            starts_at: start.toISOString(),
+            starts_at: "2026-12-01T01:30:00.000Z",
           }),
         ]}
       />,

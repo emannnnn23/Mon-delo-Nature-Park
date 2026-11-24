@@ -88,6 +88,7 @@ export function GalleryPage({
   );
   const messageRef = useRef<HTMLParagraphElement>(null);
   const gridRef = useRef<HTMLUListElement>(null);
+  const filterRef = useRef<HTMLSelectElement>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const refocus = useRef<
     | { kind: "move"; id: string; direction: "up" | "down" }
@@ -138,7 +139,9 @@ export function GalleryPage({
         ?.querySelector<HTMLElement>(`[data-reorder="${target.direction}"]`)
         ?.focus();
     } else {
-      tiles[Math.min(target.index, tiles.length - 1)]?.focus();
+      (
+        tiles[Math.min(target.index, tiles.length - 1)] ?? filterRef.current
+      )?.focus();
     }
   }, [images]);
 
@@ -238,11 +241,19 @@ export function GalleryPage({
       } finally {
         if (added.length > 0) {
           setImages((cur) => sortRows([...cur, ...added]));
-          toast.success(
-            added.length === 1
-              ? "1 photo added."
-              : `${added.length} photos added.`,
-          );
+          if (added.length === rows.length) {
+            toast.success(
+              added.length === 1
+                ? "1 photo added."
+                : `${added.length} photos added.`,
+            );
+          } else {
+            // A later one failed: say what happened to the others, so the
+            // owner knows they are not lost (the error itself is shown too).
+            toast.warning(
+              `${added.length} of ${rows.length} photos were added. The rest are in your media library.`,
+            );
+          }
         }
       }
     }, "photo");
@@ -258,7 +269,15 @@ export function GalleryPage({
     return updated === null ? null : (updated.caption ?? "");
   };
 
-  const handleCategory = (image: ImageRow, categoryId: string | null) =>
+  const handleCategory = (image: ImageRow, categoryId: string | null) => {
+    // With a category filter on, the photo leaves the view: keep keyboard
+    // focus in the grid (or on the filter when nothing is left).
+    if (filter !== null && (categoryId ?? NO_CATEGORY) !== filter) {
+      refocus.current = {
+        kind: "delete",
+        index: shown.findIndex((i) => i.id === image.id),
+      };
+    }
     void run(async () => {
       replaceImage(
         await updateRow("gallery_images", image.id, {
@@ -266,6 +285,7 @@ export function GalleryPage({
         }),
       );
     }, "photo");
+  };
 
   const handleFeatured = (image: ImageRow, next: boolean) =>
     void run(async () => {
@@ -479,6 +499,7 @@ export function GalleryPage({
             <div className="max-w-xs">
               <FormField label="Show photos in" name="filter">
                 <select
+                  ref={filterRef}
                   value={filter ?? ""}
                   onChange={(e) => changeFilter(e.target.value)}
                   className={CONTROL_CLASS}

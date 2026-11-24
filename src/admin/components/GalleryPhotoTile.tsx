@@ -88,15 +88,17 @@ export function GalleryPhotoTile({
       isPublished: image.is_published,
     });
     if (!parsed.success) {
+      // Never save past a failed check. A caption problem is the owner's to
+      // fix; anything else is about the stored photo, not what was typed.
       const issue = parsed.error.issues.find((i) => i.path[0] === "caption");
-      if (issue) {
-        setError(issue.message);
-        document.getElementById(`caption-${image.id}`)?.focus();
-        return;
-      }
-    } else {
-      setError(undefined);
+      setError(
+        issue?.message ??
+          "This photo couldn't be saved. Please reload the page and try again.",
+      );
+      document.getElementById(`caption-${image.id}`)?.focus();
+      return;
     }
+    setError(undefined);
     const next = await onSaveCaption(image, caption.trim());
     if (next === null) return;
     setCaption(next);

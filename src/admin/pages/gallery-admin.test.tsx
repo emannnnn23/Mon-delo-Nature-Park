@@ -269,6 +269,23 @@ describe("Photos tab: adding photos", () => {
       screen.getByRole("group", { name: "Blue lagoon at sunrise" }),
     ).toBeInTheDocument();
   });
+
+  it("says how many were added and where the rest are when a later one fails", async () => {
+    vi.mocked(nextSortOrder).mockResolvedValue(0);
+    vi.mocked(insertRow)
+      .mockResolvedValueOnce(image("one", { is_published: false }))
+      .mockRejectedValueOnce(
+        new AdminError("NETWORK", "Can't reach the server."),
+      );
+    renderGallery();
+    await addPhotos();
+    expect(
+      await screen.findByText(
+        "1 of 2 photos were added. The rest are in your media library.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 photo added.")).not.toBeInTheDocument();
+  });
 });
 
 describe("Photos tab: the grid", () => {
@@ -611,6 +628,73 @@ describe("Photos tab: filter by category", () => {
       screen.getByRole("button", { name: "Move photo 1 right" }),
     );
     expect(swapOrder).toHaveBeenCalledWith("gallery_images", two[0], two[2]);
+  });
+});
+
+describe("Photos tab: tile edge cases", () => {
+  it("does not save a caption when the photo itself is invalid", async () => {
+    renderGallery({
+      images: [image("a", { caption: "Mist", category_id: "not-an-id" })],
+    });
+    const input = screen.getByRole("textbox", { name: /Caption for photo 1/ });
+    await userEvent.type(input, "!");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save caption for photo 1" }),
+    );
+    expect(updateRow).not.toHaveBeenCalled();
+    expect(await screen.findByText(/couldn.t be saved/i)).toBeInTheDocument();
+  });
+
+  const waterfall = (id: string, caption: string, sort_order: number) =>
+    image(id, { caption, sort_order, category_id: WATERFALLS });
+
+  it("moves focus to the neighbouring photo when a category change hides the focused one", async () => {
+    vi.mocked(updateRow).mockImplementation(async (_t, id, values) => ({
+      ...waterfall(String(id), String(id), 1),
+      ...(values as object),
+    }));
+    renderGallery({
+      images: [waterfall("a", "Mist", 1), waterfall("c", "Cascade", 2)],
+      entry: `/admin/gallery?category=${WATERFALLS}`,
+    });
+    const select = screen.getByLabelText("Category for photo 1");
+    await userEvent.selectOptions(select, "Trails");
+    await waitFor(() =>
+      expect(screen.queryByRole("group", { name: "Mist" })).toBeNull(),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "Cascade" })).toHaveFocus(),
+    );
+  });
+
+  it("moves focus to the filter when the last photo of the view is moved away", async () => {
+    vi.mocked(updateRow).mockImplementation(async (_t, id, values) => ({
+      ...waterfall(String(id), String(id), 1),
+      ...(values as object),
+    }));
+    renderGallery({
+      images: [waterfall("a", "Mist", 1)],
+      entry: `/admin/gallery?category=${WATERFALLS}`,
+    });
+    await userEvent.selectOptions(
+      screen.getByLabelText("Category for photo 1"),
+      "Trails",
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Show photos in")).toHaveFocus(),
+    );
+  });
+
+  it("leaves focus alone when the changed photo stays in the view", async () => {
+    vi.mocked(updateRow).mockImplementation(async (_t, id, values) => ({
+      ...waterfall(String(id), String(id), 1),
+      ...(values as object),
+    }));
+    renderGallery({ images: [waterfall("a", "Mist", 1)] });
+    const select = screen.getByLabelText("Category for photo 1");
+    await userEvent.selectOptions(select, "Trails");
+    await waitFor(() => expect(updateRow).toHaveBeenCalled());
+    expect(screen.getByLabelText("Show photos in")).not.toHaveFocus();
   });
 });
 

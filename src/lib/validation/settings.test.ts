@@ -50,6 +50,32 @@ describe("settingsSchema", () => {
     expect(ok({ mapsEmbedUrl: "  " })).toBe(true);
   });
 
+  it("accepts Google's whole Copy HTML snippet and saves only the map address", () => {
+    const parsed = settingsSchema.safeParse({
+      ...good,
+      mapsEmbedUrl:
+        '<iframe src="https://www.google.com/maps/embed?pb=1&amp;x=2" width="600" height="450"></iframe>',
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(settingsColumns(parsed.data).maps_embed_url).toBe(
+        "https://www.google.com/maps/embed?pb=1&x=2",
+      );
+    }
+  });
+
+  it("explains in plain words when the map is not from Google Maps", () => {
+    expect(
+      messageFor(
+        { mapsEmbedUrl: '<iframe src="https://evil.com/x"></iframe>' },
+        "mapsEmbedUrl",
+      ),
+    ).toMatch(/Share.*Embed a map.*Copy HTML/);
+    expect(
+      messageFor({ mapsEmbedUrl: "https://evil.com/embed" }, "mapsEmbedUrl"),
+    ).not.toMatch(/src|https:\/\//);
+  });
+
   it("only accepts https addresses for links and social media", () => {
     for (const field of [
       "mapsListingUrl",

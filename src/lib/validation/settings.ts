@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isGoogleEmbed } from "~/lib/maps";
+import { extractMapEmbedUrl, isGoogleEmbed } from "~/lib/maps";
 import type { SettingsUpdate } from "~/types/db-helpers";
 
 /**
@@ -43,7 +43,7 @@ export const settingsSchema = z
     plusCode: text,
     latitude: numberText,
     longitude: numberText,
-    mapsEmbedUrl: text,
+    mapsEmbedUrl: z.string().transform(extractMapEmbedUrl),
     mapsListingUrl: text,
     phone: text,
     email: text,
@@ -82,7 +82,7 @@ export const settingsSchema = z
     if (value.mapsEmbedUrl !== "" && !isGoogleEmbed(value.mapsEmbedUrl)) {
       add(
         "mapsEmbedUrl",
-        "Use the address from Google Maps' “Embed a map”. It starts with https://www.google.com/maps/embed",
+        "That isn't a Google Maps map. In Google Maps, open the park, choose Share, then Embed a map, then Copy HTML, and paste it here.",
       );
     }
 

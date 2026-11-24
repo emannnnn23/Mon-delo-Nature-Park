@@ -6,6 +6,7 @@ import { useToast } from "~/admin/components/Toast";
 import { useUnsavedChanges } from "~/admin/hooks/useUnsavedChanges";
 import { Button } from "~/components/common/Button";
 import { useFormDraft } from "~/hooks/useFormDraft";
+import { extractMapEmbedUrl } from "~/lib/maps";
 import { settingsColumns, settingsSchema } from "~/lib/validation/settings";
 import { toFriendlyError } from "~/services/admin/errors";
 import { updateSettings } from "~/services/admin/settings";
@@ -131,7 +132,12 @@ export function SettingsPage({ settings, media }: SettingsPageProps) {
       ?.focus();
   }, [errorTick]);
 
-  function setText(field: TextField, value: string) {
+  function setText(field: TextField, raw: string) {
+    // Owners paste Google's whole "Copy HTML" snippet; keep only the map address.
+    const value =
+      field === "mapsEmbedUrl" && /<iframe\b/i.test(raw)
+        ? extractMapEmbedUrl(raw)
+        : raw;
     setValues((v) => ({ ...v, [field]: value }));
     if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
   }
@@ -232,9 +238,8 @@ export function SettingsPage({ settings, media }: SettingsPageProps) {
           {text("plusCode", "Plus code", {
             hint: "The short Google code for the spot, like M8GV+8GP.",
           })}
-          {text("mapsEmbedUrl", "Map embed address", {
-            inputMode: "url",
-            hint: 'In Google Maps, find the park, choose Share, then Embed a map, and copy the address inside src="…". It starts with https://www.google.com/maps/embed',
+          {text("mapsEmbedUrl", "Map on the Visit page", {
+            hint: "In Google Maps, open the park, choose Share, then Embed a map, then Copy HTML. Paste it here — only the map is kept.",
           })}
           {text("mapsListingUrl", "Google Maps listing link", {
             inputMode: "url",

@@ -33,6 +33,9 @@ describe("src/routes.ts", () => {
       "admin/attractions",
       "admin/attractions/:id",
       "admin/gallery",
+      "admin/testimonials",
+      "admin/announcements",
+      "admin/faqs",
       "admin/media",
       "admin/*",
     ]);

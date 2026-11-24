@@ -16,3 +16,18 @@ export function isWithinWindow(
   if (Number.isNaN(end)) return false;
   return t < end;
 }
+
+/**
+ * An ISO timestamp as the value of a `datetime-local` input: the date and
+ * time on this device's clock, to the minute ("2026-12-01T09:30"). Empty when
+ * the timestamp cannot be read.
+ */
+export function toDateTimeLocal(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const two = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}` +
+    `T${two(date.getHours())}:${two(date.getMinutes())}`
+  );
+}

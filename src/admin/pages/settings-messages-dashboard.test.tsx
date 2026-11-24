@@ -119,19 +119,32 @@ describe("SettingsPage", () => {
     );
   });
 
-  it("tells the owner how to get the map embed address", () => {
+  it("tells the owner how to get the map in plain words", () => {
     renderPage(<SettingsPage settings={settings()} media={[]} />);
-    expect(screen.getByText(/Share.*Embed a map.*src/s)).toBeInTheDocument();
+    const hint = screen.getByText(/Share.*Embed a map.*Copy HTML/s);
+    expect(hint).toBeInTheDocument();
+    expect(hint.textContent).not.toMatch(/src|https:\/\/|iframe/);
+  });
+
+  it("keeps only the map address when the owner pastes Google's snippet", async () => {
+    renderPage(<SettingsPage settings={settings()} media={[]} />);
+    const field = screen.getByLabelText(/Map on the Visit page/);
+    await userEvent.click(field);
+    await userEvent.paste(
+      '<iframe src="https://www.google.com/maps/embed?pb=1&amp;x=2" width="600"></iframe>',
+    );
+    await userEvent.tab();
+    expect(field).toHaveValue("https://www.google.com/maps/embed?pb=1&x=2");
   });
 
   it("rejects a map address that is not a Google Maps embed and does not save", async () => {
     renderPage(<SettingsPage settings={settings()} media={[]} />);
     await userEvent.type(
-      screen.getByLabelText(/Map embed address/),
+      screen.getByLabelText(/Map on the Visit page/),
       "https://evil.com/embed",
     );
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
-    const field = screen.getByLabelText(/Map embed address/);
+    const field = screen.getByLabelText(/Map on the Visit page/);
     expect(field).toHaveAttribute("aria-invalid", "true");
     expect(field).toHaveFocus();
     expect(updateSettings).not.toHaveBeenCalled();

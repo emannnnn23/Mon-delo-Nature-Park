@@ -5,7 +5,7 @@ const DEFAULT_SITE_URL = "https://mondelos-nature-park.vercel.app";
 export const SITE_URL: string =
   import.meta.env.VITE_SITE_URL || DEFAULT_SITE_URL;
 
-const SITE_NAME = "Mondelos Nature Park";
+export const SITE_NAME = "Mondelos Nature Park";
 const HOME_TITLE = "Mondelos Nature Park — Kawayan, Biliran";
 
 export type BuildMetaInput = {

@@ -1,9 +1,9 @@
 import { data, isRouteErrorResponse, useRouteError } from "react-router";
 
+import { AdminRouteError } from "~/admin/components/AdminRouteError";
 import { AdminNotFoundPage } from "~/admin/pages/AdminNotFoundPage";
 import { AttractionFormPage } from "~/admin/pages/AttractionFormPage";
 import { getRow, listRows } from "~/services/admin/crud";
-import { toFriendlyError } from "~/services/admin/errors";
 import { listMedia } from "~/services/media";
 import type { AttractionKind } from "~/types/content";
 import type { Route } from "./+types/attractions.$id";
@@ -62,18 +62,5 @@ export function ErrorBoundary() {
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <AdminNotFoundPage />;
   }
-  const { friendly } = toFriendlyError(error, { entity: "attraction" });
-  return (
-    <section aria-labelledby="attraction-error-title">
-      <h1
-        id="attraction-error-title"
-        className="font-serif text-3xl font-bold text-forest-900"
-      >
-        Attraction
-      </h1>
-      <p role="alert" className="mt-3 max-w-xl font-semibold text-red-700">
-        {friendly}
-      </p>
-    </section>
-  );
+  return <AdminRouteError title="Attraction" entity="attraction" />;
 }

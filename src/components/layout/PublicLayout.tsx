@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Announcement, SiteSettings } from "../../types/content";
 import { AnnouncementStrip } from "./AnnouncementStrip";
+import { NavigationProgress } from "./NavigationProgress";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
 
@@ -33,6 +34,7 @@ export function PublicLayout({
       >
         Skip to content
       </a>
+      <NavigationProgress />
       <AnnouncementStrip announcement={announcement} />
       <SiteHeader overHero={overHero} />
       <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">

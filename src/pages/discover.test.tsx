@@ -284,7 +284,10 @@ describe("detail route", () => {
     );
     expect(screen.queryByRole("main")).toBeNull();
     expect(
-      screen.getByRole("heading", { level: 1, name: "Something went wrong" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "We couldn't load this page",
+      }),
     ).toBeInTheDocument();
   });
 

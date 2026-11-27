@@ -26,6 +26,18 @@
     }
   }
 
+  /* Navigation progress: eases towards (never reaches) full width. */
+  --animate-nav-progress: nav-progress 8s cubic-bezier(0.1, 0.6, 0.3, 1) both;
+
+  @keyframes nav-progress {
+    from {
+      transform: scaleX(0.05);
+    }
+    to {
+      transform: scaleX(0.9);
+    }
+  }
+
   --animate-fade-in: fade-in 0.2s ease-out both;
 
   @keyframes fade-in {

@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, createRoutesStub } from "react-router";
 import { placeholders } from "../../content/placeholders";
 import type { Announcement, SiteSettings } from "../../types/content";
 import { AnnouncementStrip } from "./AnnouncementStrip";
@@ -261,16 +261,23 @@ describe("AnnouncementStrip", () => {
 
 describe("PublicLayout", () => {
   it("has a skip link to #main and a main landmark with that id", () => {
-    inRouter(
-      <PublicLayout
-        settings={settings}
-        announcement={null}
-        overHero={false}
-        year={2031}
-      >
-        <p>page</p>
-      </PublicLayout>,
-    );
+    // The layout reads the router's navigation state, so it needs a data router.
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: () => (
+          <PublicLayout
+            settings={settings}
+            announcement={null}
+            overHero={false}
+            year={2031}
+          >
+            <p>page</p>
+          </PublicLayout>
+        ),
+      },
+    ]);
+    render(<Stub />);
     const skip = screen.getByRole("link", { name: "Skip to content" });
     expect(skip).toHaveAttribute("href", "#main");
     expect(screen.getByRole("main")).toHaveAttribute("id", "main");

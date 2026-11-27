@@ -7,19 +7,13 @@
 // ErrorBoundary from here, and the framework only passes props to ones
 // declared in the route module itself, so these read the route data through
 // hooks instead.
-import {
-  data,
-  isRouteErrorResponse,
-  useLoaderData,
-  useRouteError,
-} from "react-router";
+import { data, useLoaderData, useRouteError } from "react-router";
 
 import { loadForClient } from "~/lib/routeData";
 import { mediaVariantUrl } from "~/lib/media";
 import { buildMeta, SITE_URL } from "~/lib/meta";
 import { AttractionPage } from "~/pages/AttractionPage";
-import { ErrorContent } from "~/pages/ErrorPage";
-import { NotFoundContent } from "~/pages/NotFoundPage";
+import { RouteErrorContent } from "~/pages/RouteErrorContent";
 import type { Attraction } from "~/types/content";
 import { pickFallbackSrc } from "~/utils/imageVariants";
 
@@ -86,9 +80,5 @@ export default function DiscoverDetail() {
 }
 
 export function ErrorBoundary() {
-  const error = useRouteError();
-  if (isRouteErrorResponse(error) && error.status === 404) {
-    return <NotFoundContent />;
-  }
-  return <ErrorContent />;
+  return <RouteErrorContent error={useRouteError()} />;
 }

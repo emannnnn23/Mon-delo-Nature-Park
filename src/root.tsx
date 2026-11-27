@@ -1,5 +1,4 @@
 import {
-  isRouteErrorResponse,
   Link,
   Links,
   Meta,
@@ -16,8 +15,7 @@ import "@fontsource/playfair-display/latin-700.css";
 import playfair700Latin from "@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff2?url";
 
 import { Logo } from "./components/common/Logo";
-import { ErrorContent } from "./pages/ErrorPage";
-import { NotFoundContent } from "./pages/NotFoundPage";
+import { RouteErrorContent } from "./pages/RouteErrorContent";
 import type { Route } from "./+types/root";
 import "./app.css";
 
@@ -63,7 +61,6 @@ export default function App() {
  * of the in-layout 404 and error screens.
  */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const notFound = isRouteErrorResponse(error) && error.status === 404;
   const stack =
     import.meta.env.DEV && error instanceof Error ? error.stack : undefined;
 
@@ -78,7 +75,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           <Logo />
         </Link>
       </div>
-      {notFound ? <NotFoundContent /> : <ErrorContent />}
+      <RouteErrorContent error={error} />
       {stack ? (
         <pre className="mx-auto mb-10 w-full max-w-4xl overflow-x-auto px-5 text-xs text-ink-600 sm:px-8">
           <code>{stack}</code>

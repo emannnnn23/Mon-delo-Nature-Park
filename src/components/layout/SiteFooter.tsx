@@ -66,13 +66,15 @@ export function SiteFooter({ settings, year }: SiteFooterProps) {
           </nav>
 
           <div className="flex flex-col items-start gap-3 lg:border-l lg:border-ivory-50/15 lg:px-8">
-            <p className="flex items-start gap-3">
-              <MapPin
-                aria-hidden="true"
-                className="mt-0.5 size-5 shrink-0 text-gold-500"
-              />
-              <span>{addressLine}</span>
-            </p>
+            {addressLine ? (
+              <p className="flex items-start gap-3">
+                <MapPin
+                  aria-hidden="true"
+                  className="mt-0.5 size-5 shrink-0 text-gold-500"
+                />
+                <span>{addressLine}</span>
+              </p>
+            ) : null}
             {phone ? (
               <a
                 href={`tel:${phone.replace(/[^\d+]/g, "")}`}

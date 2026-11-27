@@ -1,9 +1,7 @@
-import { useRouteError } from "react-router";
-
+import { AdminRouteError } from "~/admin/components/AdminRouteError";
 import { GalleryPage } from "~/admin/pages/GalleryPage";
 import { skipSearchOnlyRevalidation } from "~/admin/lib/revalidate";
 import { listRows } from "~/services/admin/crud";
-import { toFriendlyError } from "~/services/admin/errors";
 import { listMedia } from "~/services/media";
 import type { Route } from "./+types/gallery";
 
@@ -39,19 +37,5 @@ export default function Gallery({ loaderData }: Route.ComponentProps) {
 
 /** Shown inside the admin layout, so the menu stays available. */
 export function ErrorBoundary() {
-  const error = useRouteError();
-  const { friendly } = toFriendlyError(error, { entity: "photo" });
-  return (
-    <section aria-labelledby="gallery-error-title">
-      <h1
-        id="gallery-error-title"
-        className="font-serif text-3xl font-bold text-forest-900"
-      >
-        Gallery
-      </h1>
-      <p role="alert" className="mt-3 max-w-xl font-semibold text-red-700">
-        {friendly}
-      </p>
-    </section>
-  );
+  return <AdminRouteError title="Gallery" entity="photo" />;
 }

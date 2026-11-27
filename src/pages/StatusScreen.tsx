@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Eyebrow } from "../components/common/Eyebrow";
 import { LeafDecor } from "../components/common/LeafDecor";
 
@@ -8,6 +8,12 @@ type StatusScreenProps = {
   children: ReactNode;
   /** The buttons under the message. */
   actions: ReactNode;
+  /**
+   * Move focus to the heading when the screen appears. For error screens that
+   * replace a page after a navigation, so the change is announced and the
+   * keyboard starts from the message.
+   */
+  focusTitle?: boolean;
 };
 
 /**
@@ -20,7 +26,13 @@ export function StatusScreen({
   title,
   children,
   actions,
+  focusTitle = false,
 }: StatusScreenProps) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (focusTitle) titleRef.current?.focus({ preventScroll: true });
+  }, [focusTitle]);
+
   return (
     <section
       aria-labelledby="route-error-title"
@@ -53,7 +65,9 @@ export function StatusScreen({
         <Eyebrow>{eyebrow}</Eyebrow>
         <h1
           id="route-error-title"
-          className="mt-4 font-serif text-4xl leading-tight font-bold text-balance text-forest-900 md:text-6xl"
+          ref={titleRef}
+          tabIndex={focusTitle ? -1 : undefined}
+          className="mt-4 font-serif text-4xl leading-tight font-bold text-balance text-forest-900 focus:outline-none md:text-6xl"
         >
           {title}
         </h1>

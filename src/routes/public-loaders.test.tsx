@@ -203,7 +203,7 @@ describe("public route clientLoaders", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "Something went wrong",
+        name: "We couldn't load this page",
       }),
     ).toBeInTheDocument();
     expect(

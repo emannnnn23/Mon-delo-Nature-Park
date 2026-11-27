@@ -79,6 +79,9 @@ jobs:
       - run: npm ci
       # No Supabase env is set here, so the build exercises the placeholder fallback.
       - run: npm run build
+      # Checks the static site just built (meta, JSON-LD, sitemap, robots, admin
+      # code split). The Unit tests job has no build folder, so there it skips.
+      - run: npx vitest run tests/build
 
   dependency-audit:
     name: Dependency audit

@@ -1,5 +1,6 @@
 import { placeholders } from "~/content/placeholders";
 import { homeMetaDescription, selectHomeContent } from "~/lib/homeContent";
+import { serializeJsonLd, touristAttractionJsonLd } from "~/lib/jsonLd";
 import { buildMeta, SITE_URL } from "~/lib/meta";
 import { loadForBuild, loadForClient } from "~/lib/routeData";
 import { HomePage } from "~/pages/HomePage";
@@ -44,5 +45,17 @@ export function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
 clientLoader.hydrate = true as const;
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  return <HomePage {...loaderData} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(
+            touristAttractionJsonLd(loaderData.settings, `${SITE_URL}/`),
+          ),
+        }}
+      />
+      <HomePage {...loaderData} />
+    </>
+  );
 }

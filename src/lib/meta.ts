@@ -1,9 +1,10 @@
 import type { MetaDescriptor } from "react-router";
 
-const DEFAULT_SITE_URL = "https://mondelos-nature-park.vercel.app";
+import { resolveSiteUrl } from "../../scripts/site-url.mjs";
 
-export const SITE_URL: string =
-  import.meta.env.VITE_SITE_URL || DEFAULT_SITE_URL;
+// The default lives in scripts/site-url.mjs, shared with the build script that
+// writes robots.txt and sitemap.xml.
+export const SITE_URL: string = resolveSiteUrl(import.meta.env.VITE_SITE_URL);
 
 export const SITE_NAME = "Mondelos Nature Park";
 const HOME_TITLE = "Mondelos Nature Park — Kawayan, Biliran";

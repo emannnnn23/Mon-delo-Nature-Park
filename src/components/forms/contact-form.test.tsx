@@ -216,4 +216,108 @@ describe("ContactForm", () => {
     const text = await screen.findByText(/thank you/i);
     expect(text.closest("[aria-live='polite']")).not.toBeNull();
   });
+
+  it("sends once on a double click", async () => {
+    const onSubmit = vi
+      .fn<ContactSubmit>()
+      .mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve("ok"), 20)),
+      );
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.dblClick(sendButton());
+    await screen.findByText(/thank you/i);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a live character count against the real limit", async () => {
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    const message = screen.getByLabelText(/message/i);
+    expect(screen.getByText("0 / 5000")).toBeInTheDocument();
+    await user.type(message, "Hello there");
+    expect(screen.getByText("11 / 5000")).toBeInTheDocument();
+    expect(message).toHaveAccessibleDescription("11 / 5000");
+  });
+
+  it("counts characters the way the database does and never truncates", () => {
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    const message = screen.getByLabelText(/message/i);
+    expect(message).not.toHaveAttribute("maxlength");
+    fireEvent.change(message, { target: { value: "\u{1F33F}".repeat(3) } });
+    expect(screen.getByText("3 / 5000")).toBeInTheDocument();
+    fireEvent.change(message, { target: { value: "a".repeat(5001) } });
+    expect(screen.getByText("5001 / 5000")).toBeInTheDocument();
+    expect(message).toHaveValue("a".repeat(5001));
+  });
+
+  it("explains an over-long message on submit instead of cutting it", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    fireEvent.change(screen.getByLabelText(/message/i), {
+      target: { value: "a".repeat(5001) },
+    });
+    await user.click(sendButton());
+    expect(
+      await screen.findByText(/5000 characters or fewer/i),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("resets the count after a successful send", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.click(sendButton());
+    await screen.findByText(/thank you/i);
+    expect(screen.getByText("0 / 5000")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["ok", /thank you/i],
+    ["rate_limited", /several messages recently/i],
+    ["error", /something went wrong/i],
+  ] as const)(
+    "moves focus to the status line after %s",
+    async (outcome, text) => {
+      const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue(outcome);
+      const user = userEvent.setup();
+      render(<ContactForm onSubmit={onSubmit} />);
+      await fillValid(user);
+      await user.click(sendButton());
+      const line = (await screen.findByText(text)).closest("[role='status']");
+      expect(line).not.toBeNull();
+      expect(line).toHaveAttribute("aria-live", "polite");
+      await waitFor(() => expect(line).toHaveFocus());
+    },
+  );
+
+  it("keeps focus where it is until a result arrives", async () => {
+    const onSubmit = vi
+      .fn<ContactSubmit>()
+      .mockImplementation(() => new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.click(sendButton());
+    await screen.findByText(/sending/i);
+    expect(screen.getByRole("status")).not.toHaveFocus();
+  });
+
+  it("never invents contact details in its outcome messages", async () => {
+    const user = userEvent.setup();
+    render(
+      <ContactForm
+        onSubmit={vi.fn<ContactSubmit>().mockResolvedValue("rate_limited")}
+      />,
+    );
+    await fillValid(user);
+    await user.click(sendButton());
+    const line = await screen.findByText(/several messages recently/i);
+    expect(line.textContent).not.toMatch(/@|\d{4}/);
+  });
 });

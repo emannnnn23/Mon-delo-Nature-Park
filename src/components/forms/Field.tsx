@@ -5,6 +5,8 @@ type FieldProps = {
   label: string;
   name: string;
   error?: string;
+  /** Helper text under the control, linked with aria-describedby. */
+  hint?: string;
   required?: boolean;
   /** Renders a textarea instead of an input. */
   multiline?: boolean;
@@ -27,6 +29,7 @@ export function Field({
   label,
   name,
   error,
+  hint,
   required = false,
   multiline = false,
   className = "",
@@ -35,12 +38,16 @@ export function Field({
   const uid = useId();
   const id = `${uid}-${name}`;
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+  const describedBy =
+    [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ") ||
+    undefined;
   const shared = {
     id,
     name,
     required,
     "aria-invalid": error ? true : undefined,
-    "aria-describedby": error ? errorId : undefined,
+    "aria-describedby": describedBy,
     className: `${CONTROL} ${error ? "border-red-700" : "border-earth-600/50"}`,
   };
 
@@ -62,6 +69,11 @@ export function Field({
       ) : (
         <input {...shared} {...controlProps} />
       )}
+      {hint ? (
+        <p id={hintId} className="mt-1.5 text-sm text-ink-600">
+          {hint}
+        </p>
+      ) : null}
       {error ? (
         <p id={errorId} role="alert" className="mt-1.5 text-sm text-red-700">
           {error}

@@ -1,6 +1,7 @@
 import { placeholders } from "~/content/placeholders";
 import { buildMeta, SITE_URL } from "~/lib/meta";
 import { loadForBuild, loadForClient } from "~/lib/routeData";
+import type { ContactSubmit } from "~/components/forms/ContactForm";
 import { VisitPage } from "~/pages/VisitPage";
 
 import type { Route } from "./+types/visit";
@@ -38,6 +39,12 @@ export function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
 }
 clientLoader.hydrate = true as const;
 
+// Loaded on submit so supabase-js stays out of the initial public chunks.
+const sendContactMessage: ContactSubmit = async (input) => {
+  const { submitContactMessage } = await import("~/services/contact");
+  return submitContactMessage(input);
+};
+
 export default function Visit({ loaderData }: Route.ComponentProps) {
-  return <VisitPage {...loaderData} />;
+  return <VisitPage {...loaderData} onSubmit={sendContactMessage} />;
 }

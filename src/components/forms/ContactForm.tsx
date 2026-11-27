@@ -2,7 +2,11 @@ import { Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
-import { contactSchema, type ContactInput } from "../../lib/validation/contact";
+import {
+  contactSchema,
+  MESSAGE_MAX_LENGTH,
+  type ContactInput,
+} from "../../lib/validation/contact";
 import { useHydrated } from "../../hooks/useHydrated";
 import { Button } from "../common/Button";
 import { Field } from "./Field";
@@ -50,12 +54,14 @@ const HONEYPOT_WRAPPER =
 export function ContactForm({ onSubmit }: ContactFormProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [errors, setErrors] = useState<Errors>({});
+  const [messageLength, setMessageLength] = useState(0);
   const mountedAt = useRef<number | null>(null);
-  const sending = useRef(false);
+  const submittingRef = useRef(false);
+  const statusRef = useRef<HTMLDivElement>(null);
   const hydrated = useHydrated();
 
-  // The mount time is set in an effect so server rendering and hydration stay
-  // identical. `hydrated` is false on the server and during hydration, and the
+  // `elapsedMs` is the time since the form first rendered in the browser. It is
+  // set in an effect so server rendering and hydration stay identical. `hydrated` is false on the server and during hydration, and the
   // submit button stays disabled until it flips: a prerendered form submitted
   // before the page hydrates would otherwise reload the page with the typed
   // details in the address bar.
@@ -63,9 +69,17 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
     mountedAt.current = Date.now();
   }, []);
 
+  // After a send, focus moves to the status line so keyboard and screen reader
+  // users land on the result. Validation errors keep their own focus handling.
+  useEffect(() => {
+    if (status === "ok" || status === "rate_limited" || status === "error") {
+      statusRef.current?.focus();
+    }
+  }, [status]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (sending.current || !onSubmit) return;
+    if (submittingRef.current || !onSubmit) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     const text = (key: string) => {
@@ -97,7 +111,7 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
     }
 
     setErrors({});
-    sending.current = true;
+    submittingRef.current = true;
     setStatus("sending");
     let outcome: ContactOutcome;
     try {
@@ -109,9 +123,12 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
     } catch {
       outcome = "error";
     } finally {
-      sending.current = false;
+      submittingRef.current = false;
     }
-    if (outcome === "ok") form.reset();
+    if (outcome === "ok") {
+      form.reset();
+      setMessageLength(0);
+    }
     setStatus(outcome);
   }
 
@@ -173,7 +190,12 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
         name="message"
         multiline
         required
-        maxLength={5000}
+        // No maxLength: the browser would cut text silently. The count below
+        // and the schema message explain the limit instead.
+        hint={`${messageLength} / ${MESSAGE_MAX_LENGTH}`}
+        onChange={(event) =>
+          setMessageLength([...event.currentTarget.value].length)
+        }
         error={errors.message}
       />
 
@@ -209,7 +231,13 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
         >
           Send Message
         </Button>
-        <div aria-live="polite" role="status" className="min-h-6">
+        <div
+          ref={statusRef}
+          tabIndex={-1}
+          aria-live="polite"
+          role="status"
+          className="min-h-6 outline-none"
+        >
           {isSending ? (
             <span className="text-sm text-ink-600">Sending…</span>
           ) : null}

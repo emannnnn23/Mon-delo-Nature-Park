@@ -231,6 +231,61 @@ describe("ContactForm", () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
+  it("lets the ref, not the disabled button, stop a repeat submit while one is pending", async () => {
+    // The submit event is fired on the form itself, so the disabled button
+    // cannot stop it: only the ref guard can, even after React re-rendered.
+    let resolve: (v: "ok") => void = () => {};
+    const onSubmit = vi.fn<ContactSubmit>().mockImplementation(
+      () =>
+        new Promise((r) => {
+          resolve = r;
+        }),
+    );
+    const user = userEvent.setup();
+    const { container } = render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    const form = container.querySelector("form") as HTMLFormElement;
+    fireEvent.submit(form);
+    await waitFor(() => expect(sendButton()).toBeDisabled());
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    resolve("ok");
+    await screen.findByText(/thank you/i);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows another send after a failed one", async () => {
+    const onSubmit = vi
+      .fn<ContactSubmit>()
+      .mockResolvedValueOnce("error")
+      .mockResolvedValueOnce("ok");
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.click(sendButton());
+    await screen.findByText(/something went wrong/i);
+    expect(sendButton()).toBeEnabled();
+    await user.click(sendButton());
+    await screen.findByText(/thank you/i);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("allows another send after a rejected one", async () => {
+    const onSubmit = vi
+      .fn<ContactSubmit>()
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce("ok");
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.click(sendButton());
+    await screen.findByText(/something went wrong/i);
+    await user.click(sendButton());
+    await screen.findByText(/thank you/i);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
   it("shows a live character count against the real limit", async () => {
     const user = userEvent.setup();
     render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
@@ -248,8 +303,25 @@ describe("ContactForm", () => {
     fireEvent.change(message, { target: { value: "\u{1F33F}".repeat(3) } });
     expect(screen.getByText("3 / 5000")).toBeInTheDocument();
     fireEvent.change(message, { target: { value: "a".repeat(5001) } });
-    expect(screen.getByText("5001 / 5000")).toBeInTheDocument();
+    expect(screen.getByText("5001 / 5000 — too long")).toBeInTheDocument();
     expect(message).toHaveValue("a".repeat(5001));
+  });
+
+  it("flags an over-long message with words and aria-invalid, not live announcements", () => {
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    const message = screen.getByLabelText(/message/i);
+    fireEvent.change(message, { target: { value: "a".repeat(5000) } });
+    expect(screen.getByText("5000 / 5000")).toBeInTheDocument();
+    expect(message).not.toHaveAttribute("aria-invalid");
+    fireEvent.change(message, { target: { value: "a".repeat(5001) } });
+    const hint = screen.getByText("5001 / 5000 — too long");
+    expect(message).toHaveAttribute("aria-invalid", "true");
+    expect(message).toHaveAccessibleDescription("5001 / 5000 — too long");
+    expect(hint.closest("[aria-live]")).toBeNull();
+    expect(hint).not.toHaveAttribute("role");
+    fireEvent.change(message, { target: { value: "a".repeat(4000) } });
+    expect(message).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByText("4000 / 5000")).toBeInTheDocument();
   });
 
   it("explains an over-long message on submit instead of cutting it", async () => {
@@ -308,16 +380,23 @@ describe("ContactForm", () => {
     expect(screen.getByRole("status")).not.toHaveFocus();
   });
 
-  it("never invents contact details in its outcome messages", async () => {
-    const user = userEvent.setup();
-    render(
-      <ContactForm
-        onSubmit={vi.fn<ContactSubmit>().mockResolvedValue("rate_limited")}
-      />,
-    );
-    await fillValid(user);
-    await user.click(sendButton());
-    const line = await screen.findByText(/several messages recently/i);
-    expect(line.textContent).not.toMatch(/@|\d{4}/);
-  });
+  it.each([
+    ["ok", /thank you/i],
+    ["rate_limited", /several messages recently/i],
+    ["error", /something went wrong/i],
+  ] as const)(
+    "never invents contact details in the %s message",
+    async (outcome, text) => {
+      const user = userEvent.setup();
+      render(
+        <ContactForm
+          onSubmit={vi.fn<ContactSubmit>().mockResolvedValue(outcome)}
+        />,
+      );
+      await fillValid(user);
+      await user.click(sendButton());
+      const line = await screen.findByText(text);
+      expect(line.textContent).not.toMatch(/@|\d{3}|tel|call|phone|e-?mail/i);
+    },
+  );
 });

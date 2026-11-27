@@ -61,10 +61,11 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
   const hydrated = useHydrated();
 
   // `elapsedMs` is the time since the form first rendered in the browser. It is
-  // set in an effect so server rendering and hydration stay identical. `hydrated` is false on the server and during hydration, and the
-  // submit button stays disabled until it flips: a prerendered form submitted
-  // before the page hydrates would otherwise reload the page with the typed
-  // details in the address bar.
+  // set in an effect so server rendering and hydration stay identical.
+  // `hydrated` is false on the server and during hydration, and the submit
+  // button stays disabled until it flips: a prerendered form submitted before
+  // the page hydrates would otherwise reload the page with the typed details in
+  // the address bar.
   useEffect(() => {
     mountedAt.current = Date.now();
   }, []);
@@ -133,6 +134,7 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
   }
 
   const isSending = status === "sending";
+  const messageTooLong = messageLength > MESSAGE_MAX_LENGTH;
   const outcomeText =
     status === "ok" || status === "rate_limited" || status === "error"
       ? MESSAGES[status]
@@ -192,7 +194,10 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
         required
         // No maxLength: the browser would cut text silently. The count below
         // and the schema message explain the limit instead.
-        hint={`${messageLength} / ${MESSAGE_MAX_LENGTH}`}
+        hint={`${messageLength} / ${MESSAGE_MAX_LENGTH}${
+          messageTooLong ? " — too long" : ""
+        }`}
+        aria-invalid={messageTooLong || errors.message ? true : undefined}
         onChange={(event) =>
           setMessageLength([...event.currentTarget.value].length)
         }

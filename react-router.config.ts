@@ -1,6 +1,6 @@
 import type { Config } from "@react-router/dev/config";
 
-import { listSlugsForBuild } from "./src/lib/buildContent";
+import { prerenderSlugs } from "./src/lib/buildContent";
 
 export default {
   appDirectory: "src",
@@ -8,6 +8,8 @@ export default {
   // `/` must be listed so the SPA fallback is written as __spa-fallback.html.
   // Attraction pages are the published slugs at build time; a slug published
   // later is answered in the browser by the detail route's clientLoader.
+  // prerenderSlugs() fails the build if the list no longer fits the detail
+  // module src/routes.ts registered.
   prerender: async () => [
     "/",
     "/discover",
@@ -15,6 +17,6 @@ export default {
     "/about",
     "/visit",
     "/404",
-    ...(await listSlugsForBuild()).map((slug) => `/discover/${slug}`),
+    ...(await prerenderSlugs()).map((slug) => `/discover/${slug}`),
   ],
 } satisfies Config;

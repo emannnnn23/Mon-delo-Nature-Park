@@ -12,6 +12,11 @@ function messageOf(error: unknown): string {
 /**
  * Build-time content for a route `loader` (and the pre-render list).
  *
+ * Build-only: call it from a route `loader`, react-router.config.ts or
+ * src/routes.ts, never from client code (a `clientLoader`, component or
+ * hook). It reads `process.env` and returns placeholders on failure, which
+ * must never reach the browser; client code uses `loadForClient`.
+ *
  * A production build (`VERCEL_ENV === "production"`) must publish real
  * content, so a missing Supabase env or any failed fetch fails the build.
  * Every other build (local, preview, CI) warns and uses `fallback`, the

@@ -27,8 +27,10 @@ export function loader() {
 }
 
 // The build rejects a parent `loader` without a `clientLoader` when any child
-// is not prerendered (here the catch-all route). Hydrating through it also
-// gives those paths their chrome data, since the SPA fallback carries none.
+// is not prerendered (here the catch-all route). On those paths the SPA
+// fallback carries no chrome data, so the chrome comes only from the live
+// fetch: offline, `serverLoader()` has no snapshot to return and the root
+// error page shows until Task 4 adds the in-layout error view.
 export function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
   return loadForClient(liveChrome, () => serverLoader());
 }

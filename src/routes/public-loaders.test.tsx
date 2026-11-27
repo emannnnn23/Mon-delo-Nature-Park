@@ -201,8 +201,14 @@ describe("public route clientLoaders", () => {
     content.getAttractionBySlug.mockRejectedValue(new Error("offline"));
     renderDetail(detail, "new-one", notPrerendered);
     expect(
-      await screen.findByRole("heading", { level: 1 }),
-    ).not.toHaveTextContent("Page not found");
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Something went wrong",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Page not found" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("New One")).not.toBeInTheDocument();
   });
 

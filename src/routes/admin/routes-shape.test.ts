@@ -5,10 +5,17 @@ import routes from "../../routes";
 
 // The route config and the pre-render list both read the published slugs at
 // build time; pin them so this test never reaches Supabase.
-vi.mock("../../lib/buildContent", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/buildContent")>()),
-  listSlugsForBuild: vi.fn(async () => ["falls"]),
-}));
+vi.mock("../../lib/buildContent", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../lib/buildContent")>();
+  return {
+    ...actual,
+    registerDetailRouteModule: vi.fn(async () =>
+      actual.detailRouteModule(["falls"]),
+    ),
+    prerenderSlugs: vi.fn(async () => ["falls"]),
+  };
+});
 
 function paths(entries: RouteConfigEntry[]): string[] {
   return entries.flatMap((entry) => [

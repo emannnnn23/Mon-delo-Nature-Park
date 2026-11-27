@@ -5,17 +5,19 @@ import {
   route,
 } from "@react-router/dev/routes";
 
-import { detailRouteModule, listSlugsForBuild } from "./lib/buildContent";
+import { registerDetailRouteModule } from "./lib/buildContent";
 
 // The same slug list react-router.config.ts pre-renders: with none, the
 // detail route must be the clientLoader-only module (ruling R13).
-const detailSlugs = await listSlugsForBuild();
+// Typegen (`npm run typecheck`), dev and build all evaluate this file, so each
+// queries Supabase for the slugs whenever a Supabase env is set.
+const detailModule = await registerDetailRouteModule();
 
 export default [
   layout("routes/_public.tsx", [
     index("routes/home.tsx"),
     route("discover", "routes/discover.tsx"),
-    route("discover/:slug", detailRouteModule(detailSlugs), {
+    route("discover/:slug", detailModule, {
       id: "routes/discover.$slug",
     }),
     route("gallery", "routes/gallery.tsx"),

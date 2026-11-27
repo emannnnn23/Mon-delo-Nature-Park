@@ -1,8 +1,11 @@
 import { useId } from "react";
-import { useRevalidator, useRouteError } from "react-router";
+import { useLocation, useRevalidator, useRouteError } from "react-router";
 
 import { Button } from "~/components/common/Button";
 import { toFriendlyError } from "~/services/admin/errors";
+
+import { isAdminListPath } from "../lib/listRoutes";
+import { AdminListSkeleton } from "./AdminListSkeleton";
 
 type AdminRouteErrorProps = {
   /** The page's heading, kept so the owner knows where they are. */
@@ -19,8 +22,14 @@ type AdminRouteErrorProps = {
 export function AdminRouteError({ title, entity }: AdminRouteErrorProps) {
   const error = useRouteError();
   const revalidator = useRevalidator();
+  const { pathname } = useLocation();
   const titleId = useId();
   const { friendly } = toFriendlyError(error, { entity });
+  // A list page being retried shows the loading skeleton; the panel returns
+  // if it fails again. Forms keep the panel, with Retry disabled.
+  if (revalidator.state === "loading" && isAdminListPath(pathname)) {
+    return <AdminListSkeleton />;
+  }
   return (
     <section aria-labelledby={titleId}>
       <h1

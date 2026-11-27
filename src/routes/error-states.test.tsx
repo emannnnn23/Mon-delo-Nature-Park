@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import type { ComponentType } from "react";
 import {
   Link,
-  Outlet,
   RouterProvider,
   createMemoryRouter,
   createRoutesStub,
@@ -15,6 +14,8 @@ import { placeholders } from "~/content/placeholders";
 import { subscribeToSignOut } from "~/services/auth";
 
 import { ErrorBoundary as FaqsBoundary } from "./admin/faqs";
+import { ErrorBoundary as AttractionFormBoundary } from "./admin/attractions.$id";
+import { HydrateFallback as AdminHydrateFallback } from "./admin/_layout";
 import { ErrorBoundary as PublicBoundary } from "./_public";
 import Public from "./_public";
 
@@ -233,65 +234,215 @@ describe("navigation progress bar", () => {
   });
 });
 
-describe("admin loading and error states", () => {
-  function renderAdmin(slow: Promise<null>) {
+/** A promise that stays pending until `release()` is called. */
+function gate() {
+  let release: (value: null) => void = () => {};
+  const promise = new Promise<null>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+}
+
+const rows = () => screen.queryAllByTestId("skeleton-row");
+
+describe("admin skeleton: first load", () => {
+  function renderFallback(path: string) {
+    const Stub = createRoutesStub([
+      { path: "*", Component: AdminHydrateFallback },
+    ]);
+    return render(<Stub initialEntries={[path]} />);
+  }
+
+  it.each(["/admin/faqs", "/admin/messages", "/admin/pages/home"])(
+    "shows the 3-row skeleton on a hard load of %s, with no shell or user",
+    (path) => {
+      renderFallback(path);
+      expect(rows()).toHaveLength(3);
+      expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+      expect(screen.queryByText(/@/)).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(["/admin", "/admin/settings", "/admin/attractions/new"])(
+    "keeps the spinner on a hard load of %s",
+    (path) => {
+      renderFallback(path);
+      expect(rows()).toHaveLength(0);
+      expect(
+        screen.getByRole("status", { name: "Loading the admin" }),
+      ).toBeInTheDocument();
+    },
+  );
+});
+
+describe("admin skeleton: navigation", () => {
+  function renderAdmin(
+    initial: string,
+    children: { path: string; loader?: () => unknown }[],
+  ) {
     const Stub = createRoutesStub([
       {
         path: "/admin",
         Component: () => <AdminLayout email="owner@mondelos.test" />,
         children: [
-          { path: "attractions", Component: () => <h1>Attractions page</h1> },
-          { path: "faqs", loader: () => slow, Component: () => <Outlet /> },
+          {
+            path: "pages/:page",
+            Component: () => <Link to="/admin/pages/about">To about</Link>,
+          },
+          ...children.map((c) => ({
+            path: c.path,
+            loader: c.loader,
+            Component: () => (
+              <>
+                <h1>Page {c.path}</h1>
+                <Link to="/admin/attractions/new">New attraction</Link>
+                <Link to="/admin/messages?status=new">New messages</Link>
+              </>
+            ),
+          })),
         ],
       },
     ]);
-    return render(<Stub initialEntries={["/admin/attractions"]} />);
+    return render(<Stub initialEntries={[initial]} />);
   }
 
-  it("shows a 3-row skeleton while the next admin list loads", async () => {
-    let release: (value: null) => void = () => {};
-    const slow = new Promise<null>((resolve) => {
-      release = resolve;
-    });
-    renderAdmin(slow);
-    await screen.findByRole("heading", { name: "Attractions page" });
-    expect(screen.queryAllByTestId("skeleton-row")).toHaveLength(0);
+  it("shows a 3-row skeleton while another admin list loads", async () => {
+    const slow = gate();
+    renderAdmin("/admin/attractions", [
+      { path: "attractions" },
+      { path: "faqs", loader: () => slow.promise },
+    ]);
+    await screen.findByRole("heading", { name: "Page attractions" });
+    expect(rows()).toHaveLength(0);
 
     const nav = screen.getAllByRole("navigation", { name: "Admin" })[0];
     await userEvent.click(within(nav).getByRole("link", { name: "FAQs" }));
-    await waitFor(() =>
-      expect(screen.getAllByTestId("skeleton-row")).toHaveLength(3),
-    );
+    await waitFor(() => expect(rows()).toHaveLength(3));
     expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
 
-    await act(async () => release(null));
-    await waitFor(() =>
-      expect(screen.queryAllByTestId("skeleton-row")).toHaveLength(0),
-    );
+    await act(async () => slow.release(null));
+    await waitFor(() => expect(rows()).toHaveLength(0));
   });
 
-  it("shows an error panel with Retry that re-runs the loader", async () => {
+  it("shows it for a filter change on the same list (messages?status=)", async () => {
+    let calls = 0;
+    const second = gate();
+    renderAdmin("/admin/messages", [
+      {
+        path: "messages",
+        loader: () => (++calls === 1 ? null : second.promise),
+      },
+    ]);
+    await userEvent.click(
+      await screen.findByRole("link", { name: "New messages" }),
+    );
+    await waitFor(() => expect(rows()).toHaveLength(3));
+    await act(async () => second.release(null));
+    await waitFor(() => expect(rows()).toHaveLength(0));
+  });
+
+  it("shows it for a move inside a section (pages/home to pages/about)", async () => {
+    const slow = gate();
+    let calls = 0;
+    const Stub = createRoutesStub([
+      {
+        path: "/admin",
+        Component: () => <AdminLayout email="owner@mondelos.test" />,
+        children: [
+          {
+            path: "pages/:page",
+            loader: () => (++calls === 1 ? null : slow.promise),
+            Component: () => <Link to="/admin/pages/about">To about</Link>,
+          },
+        ],
+      },
+    ]);
+    render(<Stub initialEntries={["/admin/pages/home"]} />);
+    await userEvent.click(
+      await screen.findByRole("link", { name: "To about" }),
+    );
+    await waitFor(() => expect(rows()).toHaveLength(3));
+    await act(async () => slow.release(null));
+    await waitFor(() => expect(rows()).toHaveLength(0));
+  });
+
+  it("does not blank the page for list to form, or for a form route load", async () => {
+    const slow = gate();
+    renderAdmin("/admin/attractions", [
+      { path: "attractions" },
+      { path: "attractions/:id", loader: () => slow.promise },
+    ]);
+    await userEvent.click(
+      await screen.findByRole("link", { name: "New attraction" }),
+    );
+    // The navigation is loading, and the list page is still on screen.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(rows()).toHaveLength(0);
+    expect(
+      screen.getByRole("heading", { name: "Page attractions" }),
+    ).toBeInTheDocument();
+    await act(async () => slow.release(null));
+    expect(
+      await screen.findByRole("heading", { name: "Page attractions/:id" }),
+    ).toBeInTheDocument();
+    expect(rows()).toHaveLength(0);
+  });
+});
+
+describe("admin skeleton: retry", () => {
+  function renderBoundary(
+    path: string,
+    Boundary: () => React.ReactNode,
+    second: Promise<null>,
+  ) {
     let attempts = 0;
     const Stub = createRoutesStub([
       {
-        path: "/",
+        path,
         loader: () => {
           attempts += 1;
           if (attempts === 1) throw new Error("offline");
-          return null;
+          return second;
         },
-        Component: () => <h1>Loaded FAQs</h1>,
-        ErrorBoundary: FaqsBoundary,
+        Component: () => <h1>Loaded</h1>,
+        ErrorBoundary: Boundary,
       },
     ]);
-    render(<Stub />);
+    render(<Stub initialEntries={[path]} />);
+  }
+
+  it("shows an error panel with Retry, then the skeleton while retrying", async () => {
+    const second = gate();
+    renderBoundary("/admin/faqs", FaqsBoundary, second.promise);
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Something went wrong. Please try again.",
     );
+    expect(rows()).toHaveLength(0);
+
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(rows()).toHaveLength(3));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    await act(async () => second.release(null));
     expect(
-      await screen.findByRole("heading", { name: "Loaded FAQs" }),
+      await screen.findByRole("heading", { name: "Loaded" }),
     ).toBeInTheDocument();
-    expect(attempts).toBe(2);
+    expect(rows()).toHaveLength(0);
+  });
+
+  it("keeps the panel (Retry disabled) when a form route is retried", async () => {
+    const second = gate();
+    renderBoundary(
+      "/admin/attractions/new",
+      AttractionFormBoundary,
+      second.promise,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Retry" })).toBeDisabled(),
+    );
+    expect(rows()).toHaveLength(0);
+    await act(async () => second.release(null));
+    await screen.findByRole("heading", { name: "Loaded" });
   });
 });

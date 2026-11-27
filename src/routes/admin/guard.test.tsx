@@ -2,6 +2,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import {
+  MemoryRouter,
   RouterContextProvider,
   createRoutesStub,
   useLoaderData,
@@ -207,7 +208,14 @@ describe("other admin modules", () => {
   });
 
   it("HydrateFallback is a labelled status spinner", () => {
-    render(createElement(layout.HydrateFallback));
+    // It reads the path to pick the list skeleton, so it needs a router.
+    render(
+      createElement(
+        MemoryRouter,
+        { initialEntries: ["/admin"] },
+        createElement(layout.HydrateFallback),
+      ),
+    );
     expect(
       screen.getByRole("status", { name: /loading/i }),
     ).toBeInTheDocument();

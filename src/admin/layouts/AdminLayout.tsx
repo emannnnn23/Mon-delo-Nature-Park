@@ -21,6 +21,7 @@ import {
   withUnsavedGuardSuspended,
 } from "../hooks/useUnsavedChanges";
 import { AdminListSkeleton } from "../components/AdminListSkeleton";
+import { isAdminListPath } from "../lib/listRoutes";
 import { ADMIN_NAV } from "../nav";
 
 type AdminLayoutProps = {
@@ -144,11 +145,6 @@ function PhoneMenu({ onClose, onNavigate, ...rest }: PhoneMenuProps) {
   );
 }
 
-/** The first path segment after /admin: the section a page belongs to. */
-function sectionOf(pathname: string): string {
-  return pathname.split("/")[2] ?? "";
-}
-
 /**
  * Shell of every signed-in admin page: forest sidebar from lg up, a top bar
  * with a menu button below it. Pages render in the one `<main id="main">`.
@@ -156,14 +152,14 @@ function sectionOf(pathname: string): string {
 export function AdminLayout({ email }: AdminLayoutProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  // Moving to another section: the old page would sit there looking alive
-  // while the next one loads, so show a skeleton instead. Moves inside a
-  // section (list to form), reloads and saves keep the page as it is, so a
-  // form is never blanked mid-edit.
+  // Navigating to a list page (another list, a filter change, back from a
+  // form): the old page would sit there looking alive while the next one
+  // loads, so show a skeleton instead. A list to form move, a form save and
+  // a reload keep the page as it is, so a form is never blanked mid-edit.
   const navigation = useNavigation();
-  const loadingSection =
+  const loadingList =
     navigation.state === "loading" &&
-    sectionOf(navigation.location.pathname) !== sectionOf(pathname);
+    isAdminListPath(navigation.location.pathname);
   // The menu is open only for the path it was opened on, so navigating (links,
   // back button) closes it without an effect.
   const [openedAt, setOpenedAt] = useState<string | null>(null);
@@ -255,7 +251,7 @@ export function AdminLayout({ email }: AdminLayoutProps) {
           tabIndex={-1}
           className="min-w-0 flex-1 px-5 py-8 focus:outline-none sm:px-8 lg:px-10 lg:py-10"
         >
-          {loadingSection ? <AdminListSkeleton /> : <Outlet />}
+          {loadingList ? <AdminListSkeleton /> : <Outlet />}
         </main>
       </div>
 

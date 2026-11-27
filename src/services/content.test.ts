@@ -487,6 +487,32 @@ describe("getAttractionBySlug", () => {
     expect(has(fake.queries[0], "eq", "kind", "attraction")).toBe(true);
   });
 
+  it("embeds the cover and images through their foreign keys", async () => {
+    const fake = makeFake({ attractions: { data: null, error: null } });
+    await getAttractionBySlug("x", fake.client);
+    const [att] = fake.queries;
+    const select = att.calls.find((c) => c.op === "select")?.args[0] as string;
+    expect(select).toContain("cover:media!attractions_cover_media_id_fkey(*)");
+    expect(select).toContain(
+      "images:attraction_images(id, caption, sort_order, created_at, image:media!attraction_images_media_id_fkey(*))",
+    );
+  });
+
+  it("orders embedded attraction images by sort_order then created_at", async () => {
+    const fake = makeFake({ attractions: { data: null, error: null } });
+    await getAttractionBySlug("x", fake.client);
+    const [att] = fake.queries;
+    const embedded = att.calls
+      .filter(
+        (c) =>
+          c.op === "order" &&
+          (c.args[1] as { referencedTable?: string } | undefined)
+            ?.referencedTable === "attraction_images",
+      )
+      .map((c) => c.args[0]);
+    expect(embedded).toEqual(["sort_order", "created_at"]);
+  });
+
   it("rejects with ContentError on a Supabase error", async () => {
     const fake = makeFake({
       attractions: { data: null, error: { message: "boom", code: "XX" } },
@@ -607,7 +633,20 @@ describe("getAboutContent / getVisitContent", () => {
 });
 
 describe("without a client", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  // Blanks the public env and reloads the service, so the result never
+  // depends on a developer's .env file.
   it("throws ContentError when the public client is not configured", async () => {
-    await expect(getAboutContent()).rejects.toBeInstanceOf(ContentError);
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
+    vi.resetModules();
+    const fresh = await import("./content");
+    await expect(fresh.getAboutContent()).rejects.toBeInstanceOf(
+      fresh.ContentError,
+    );
   });
 });

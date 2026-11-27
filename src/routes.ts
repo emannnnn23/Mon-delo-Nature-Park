@@ -5,11 +5,19 @@ import {
   route,
 } from "@react-router/dev/routes";
 
+import { detailRouteModule, listSlugsForBuild } from "./lib/buildContent";
+
+// The same slug list react-router.config.ts pre-renders: with none, the
+// detail route must be the clientLoader-only module (ruling R13).
+const detailSlugs = await listSlugsForBuild();
+
 export default [
   layout("routes/_public.tsx", [
     index("routes/home.tsx"),
     route("discover", "routes/discover.tsx"),
-    route("discover/:slug", "routes/discover.$slug.tsx"),
+    route("discover/:slug", detailRouteModule(detailSlugs), {
+      id: "routes/discover.$slug",
+    }),
     route("gallery", "routes/gallery.tsx"),
     route("about", "routes/about.tsx"),
     route("visit", "routes/visit.tsx"),

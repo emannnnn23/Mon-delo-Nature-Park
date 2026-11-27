@@ -1,5 +1,6 @@
 import { placeholders } from "~/content/placeholders";
 import { buildMeta, SITE_URL } from "~/lib/meta";
+import { loadForBuild, loadForClient } from "~/lib/routeData";
 import { VisitPage } from "~/pages/VisitPage";
 
 import type { Route } from "./+types/visit";
@@ -13,14 +14,29 @@ export function meta() {
   });
 }
 
-// Build-time loader (ruling P2-R9). Phase 4 swaps placeholders for Supabase.
+// Shared by both loaders (`clientLoader` must never call the build-stripped
+// `loader`). `import()` keeps supabase-js out of the initial page chunks.
+async function liveVisit() {
+  const { getSiteChrome, getVisitContent } = await import("~/services/content");
+  const [{ sections, faqs }, { settings }] = await Promise.all([
+    getVisitContent(),
+    getSiteChrome(),
+  ]);
+  return { sections, faqs, settings };
+}
+
 export function loader() {
-  return {
+  return loadForBuild(liveVisit, {
     sections: placeholders.sections.visit,
     faqs: placeholders.faqs,
     settings: placeholders.settings,
-  };
+  });
 }
+
+export function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
+  return loadForClient(liveVisit, () => serverLoader());
+}
+clientLoader.hydrate = true as const;
 
 export default function Visit({ loaderData }: Route.ComponentProps) {
   return <VisitPage {...loaderData} />;

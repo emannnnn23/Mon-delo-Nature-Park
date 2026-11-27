@@ -10,6 +10,26 @@ describe("getPublicSupabase", () => {
     vi.unstubAllEnvs();
   });
 
+  it("createPublicSupabase builds a session-less client from an explicit env", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
+    const { createPublicSupabase } = await import("./publicClient");
+    createPublicSupabase({
+      supabaseUrl: "https://build.supabase.co",
+      supabaseAnonKey: "build-key",
+    });
+    expect(createClient).toHaveBeenCalledWith(
+      "https://build.supabase.co",
+      "build-key",
+      expect.objectContaining({
+        auth: expect.objectContaining({
+          persistSession: false,
+          storageKey: "mondelos-public",
+        }),
+      }),
+    );
+  });
+
   it("returns null when env is missing", async () => {
     vi.stubEnv("VITE_SUPABASE_URL", "");
     vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");

@@ -3,6 +3,13 @@ import type { RouteConfigEntry } from "@react-router/dev/routes";
 import config from "../../../react-router.config";
 import routes from "../../routes";
 
+// The route config and the pre-render list both read the published slugs at
+// build time; pin them so this test never reaches Supabase.
+vi.mock("../../lib/buildContent", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/buildContent")>()),
+  listSlugsForBuild: vi.fn(async () => ["falls"]),
+}));
+
 function paths(entries: RouteConfigEntry[]): string[] {
   return entries.flatMap((entry) => [
     ...(entry.path !== undefined ? [entry.path] : []),
@@ -43,6 +50,14 @@ describe("src/routes.ts", () => {
     ]);
   });
 
+  it("registers the detail module with a loader when slugs exist", () => {
+    const detail = publicLayout?.children?.find(
+      (e) => e.path === "discover/:slug",
+    );
+    expect(detail?.file).toBe("routes/discover.$slug.tsx");
+    expect(detail?.id).toBe("routes/discover.$slug");
+  });
+
   it("puts the login page outside the guarded layout and the public one", () => {
     const login = config_.find((e) => e.file === "routes/admin/login.tsx");
     expect(login?.path).toBe("admin/login");
@@ -52,11 +67,19 @@ describe("src/routes.ts", () => {
 });
 
 describe("react-router.config prerender", () => {
-  it("lists no admin path (admin is client-only)", () => {
+  it("lists the public pages and the build-time slugs, and no admin path", async () => {
     const { prerender } = config;
-    expect(Array.isArray(prerender)).toBe(true);
-    const list = prerender as string[];
-    expect(list.length).toBeGreaterThan(0);
+    expect(typeof prerender).toBe("function");
+    const list = await (prerender as () => Promise<string[]>)();
+    expect(list).toEqual([
+      "/",
+      "/discover",
+      "/gallery",
+      "/about",
+      "/visit",
+      "/404",
+      "/discover/falls",
+    ]);
     expect(list.filter((p) => p.startsWith("/admin"))).toEqual([]);
   });
 });

@@ -16,6 +16,16 @@ import * as detail from "~/routes/discover.$slug";
 import type { Attraction, MediaAsset } from "~/types/content";
 import { splitParagraphs } from "~/utils/text";
 
+// Without Supabase (as in a local build) the detail loader uses the
+// placeholders.
+vi.mock("~/services/content", () => ({
+  getAttractionBySlug: () => Promise.reject(new Error("offline")),
+}));
+beforeEach(() => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+afterEach(() => vi.restoreAllMocks());
+
 import { AttractionPage } from "./AttractionPage";
 import { DiscoverPage, type DiscoverPageProps } from "./DiscoverPage";
 
@@ -278,14 +288,10 @@ describe("detail route", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not resolve an experience slug", () => {
-    let thrown: unknown;
-    try {
-      detail.loader({ params: { slug: experiences[0].slug } } as never);
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).toMatchObject({ init: { status: 404 } });
+  it("does not resolve an experience slug", async () => {
+    await expect(
+      detail.loader({ params: { slug: experiences[0].slug } } as never),
+    ).rejects.toMatchObject({ init: { status: 404 } });
   });
 
   it("uses the summary and cover for meta", () => {

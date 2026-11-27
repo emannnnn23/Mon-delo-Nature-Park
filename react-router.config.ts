@@ -1,22 +1,20 @@
 import type { Config } from "@react-router/dev/config";
 
-import { placeholders } from "./src/content/placeholders";
-
-const attractionSlugs = placeholders.attractions
-  .filter((a) => a.kind === "attraction")
-  .map((a) => a.slug);
+import { listSlugsForBuild } from "./src/lib/buildContent";
 
 export default {
   appDirectory: "src",
   ssr: false,
   // `/` must be listed so the SPA fallback is written as __spa-fallback.html.
-  prerender: [
+  // Attraction pages are the published slugs at build time; a slug published
+  // later is answered in the browser by the detail route's clientLoader.
+  prerender: async () => [
     "/",
     "/discover",
     "/gallery",
     "/about",
     "/visit",
     "/404",
-    ...attractionSlugs.map((slug) => `/discover/${slug}`),
+    ...(await listSlugsForBuild()).map((slug) => `/discover/${slug}`),
   ],
 } satisfies Config;

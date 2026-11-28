@@ -8,6 +8,14 @@ import { join } from "node:path";
 const BUILD_DIR = join(process.cwd(), "build", "client");
 const built = existsSync(join(BUILD_DIR, "index.html"));
 
+// The CI Build job sets this, so a missing build there fails the run instead
+// of skipping every check. The unit-test job has no build and leaves it unset.
+if (!built && process.env.REQUIRE_BUILD_OUTPUT === "1") {
+  throw new Error(
+    "REQUIRE_BUILD_OUTPUT=1 but build/client/index.html is missing. Run `npm run build` first.",
+  );
+}
+
 if (!built) {
   console.warn(
     "tests/build skipped: build/client/index.html not found. Run `npm run build` first.",
@@ -15,6 +23,15 @@ if (!built) {
 }
 
 const read = (file: string) => readFileSync(join(BUILD_DIR, file), "utf8");
+
+const htmlFiles = (dir = ""): string[] =>
+  readdirSync(join(BUILD_DIR, dir), { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory()
+      ? htmlFiles(join(dir, e.name))
+      : e.name.endsWith(".html")
+        ? [join(dir, e.name)]
+        : [],
+  );
 
 describe.skipIf(!built)("build output", () => {
   it("pre-renders the home page with its title, Open Graph tags and content", () => {
@@ -24,6 +41,16 @@ describe.skipIf(!built)("build output", () => {
     );
     expect(html).toContain('property="og:title"');
     expect(html).toContain("Find Your Peace");
+  });
+
+  it("writes only absolute og:image URLs", () => {
+    for (const file of htmlFiles()) {
+      for (const m of read(file).matchAll(
+        /<meta property="og:image" content="([^"]*)"/g,
+      )) {
+        expect(m[1], file).toMatch(/^https?:\/\//);
+      }
+    }
   });
 
   it("writes the park JSON-LD into the home page without a rating", () => {
@@ -108,16 +135,65 @@ describe.skipIf(!built)("build output", () => {
     }
   });
 
-  describe("Content-Security-Policy", () => {
-    const htmlFiles = (dir = ""): string[] =>
-      readdirSync(join(BUILD_DIR, dir), { withFileTypes: true }).flatMap((e) =>
-        e.isDirectory()
-          ? htmlFiles(join(dir, e.name))
-          : e.name.endsWith(".html")
-            ? [join(dir, e.name)]
-            : [],
+  describe("bundle rules", () => {
+    const assets = () =>
+      readdirSync(join(BUILD_DIR, "assets")).filter((f) => f.endsWith(".js"));
+
+    it("keeps the placeholder content out of every script", () => {
+      // Strings that exist only in src/content/placeholders.ts (the
+      // build-time fallback of the loaders), which must never reach a client
+      // chunk.
+      const markers = ["sunset-spot", "Stroll through lush gardens"];
+      const source = readFileSync(
+        join(process.cwd(), "src", "content", "placeholders.ts"),
+        "utf8",
+      );
+      for (const marker of markers) expect(source).toContain(marker);
+      for (const file of assets()) {
+        const text = read(`assets/${file}`);
+        for (const marker of markers) {
+          expect(text.includes(marker), `${file} contains "${marker}"`).toBe(
+            false,
+          );
+        }
+      }
+    });
+
+    it("keeps supabase-js out of the scripts the home page loads at start", () => {
+      // The minifier keeps these class names (they appear in supabase-js
+      // error messages and debug output).
+      const markers = ["GoTrueClient", "PostgrestClient"];
+      const hasSupabase = (text: string) =>
+        markers.some((marker) => text.includes(marker));
+      // Control: supabase-js is in the build, in a lazy chunk. Without this
+      // the check below could pass on markers that no longer exist.
+      expect(assets().some((f) => hasSupabase(read(`assets/${f}`)))).toBe(
+        true,
       );
 
+      const html = read("index.html");
+      const initial = new Set<string>(
+        [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+\.js)"/g)].map(
+          (m) => m[1].slice(1),
+        ),
+      );
+      expect(initial.size).toBeGreaterThan(0);
+      // A chunk also loads the ones it imports statically.
+      for (const file of initial) {
+        const dir = file.slice(0, file.lastIndexOf("/") + 1);
+        for (const m of read(file).matchAll(
+          /(?:from|import)\s*"\.\/([^"]+\.js)"/g,
+        )) {
+          initial.add(dir + m[1]);
+        }
+      }
+      for (const file of initial) {
+        expect(hasSupabase(read(file)), file).toBe(false);
+      }
+    });
+  });
+
+  describe("Content-Security-Policy", () => {
     it("covers the home page, the SPA fallback and the 404 page", () => {
       const files = htmlFiles();
       expect(files).toContain("index.html");
@@ -125,16 +201,21 @@ describe.skipIf(!built)("build output", () => {
       expect(files).toContain(join("404", "index.html"));
     });
 
-    it("puts one policy first in <head> of every page, with every inline script hashed", () => {
+    it("puts one policy right after the charset in <head> of every page, before any script, with every inline script hashed", () => {
       for (const file of htmlFiles()) {
         const html = read(file);
         const metas =
           html.match(/<meta http-equiv="Content-Security-Policy"/g) ?? [];
         expect(metas, file).toHaveLength(1);
         const head = html.match(
-          /<head><meta http-equiv="Content-Security-Policy" content="([^"]*)"\/>/,
+          /<head><meta charSet="utf-8"\/><meta http-equiv="Content-Security-Policy" content="([^"]*)"\/>/,
         );
-        if (!head) throw new Error(`${file}: policy not first in <head>`);
+        if (!head) {
+          throw new Error(`${file}: policy not right after the charset meta`);
+        }
+        expect(html.indexOf("<script"), file).toBeGreaterThan(
+          html.indexOf("Content-Security-Policy"),
+        );
         const csp = head[1];
         expect(csp, file).toContain("script-src 'self' ");
         for (const m of html.matchAll(/<script\b([^>]*)>([^]*?)<\/script>/g)) {

@@ -1,16 +1,17 @@
 import { placeholders } from "~/content/placeholders";
 import { homeMetaDescription, selectHomeContent } from "~/lib/homeContent";
 import { serializeJsonLd, touristAttractionJsonLd } from "~/lib/jsonLd";
-import { buildMeta, SITE_URL } from "~/lib/meta";
+import { buildMeta, defaultShareImage, SITE_URL } from "~/lib/meta";
 import { loadForBuild, loadForClient } from "~/lib/routeData";
 import { HomePage } from "~/pages/HomePage";
 
 import type { Route } from "./+types/home";
 
-export function meta({ loaderData }: Route.MetaArgs) {
+export function meta({ loaderData, matches }: Route.MetaArgs) {
   return buildMeta({
     description: homeMetaDescription(loaderData?.sections ?? []),
     path: "/",
+    image: defaultShareImage(matches),
     siteUrl: SITE_URL,
   });
 }

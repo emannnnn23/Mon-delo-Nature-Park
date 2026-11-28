@@ -1,17 +1,18 @@
 import { placeholders } from "~/content/placeholders";
 import { findSection } from "~/lib/homeContent";
-import { buildMeta, SITE_URL } from "~/lib/meta";
+import { buildMeta, defaultShareImage, SITE_URL } from "~/lib/meta";
 import { loadForBuild, loadForClient } from "~/lib/routeData";
 import { DiscoverPage } from "~/pages/DiscoverPage";
 
 import type { Route } from "./+types/discover";
 
-export function meta() {
+export function meta({ matches }: Route.MetaArgs) {
   return buildMeta({
     title: "Discover the Park",
     description:
       "Explore the attractions and experiences at Mondelos Nature Park.",
     path: "/discover",
+    image: defaultShareImage(matches),
     siteUrl: SITE_URL,
   });
 }

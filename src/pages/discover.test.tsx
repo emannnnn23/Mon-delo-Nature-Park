@@ -316,6 +316,37 @@ describe("detail route", () => {
   });
 });
 
+describe("attraction meta share image", () => {
+  const a = attractions[0];
+  const matches = [
+    {
+      id: "routes/_public",
+      data: { settings: { defaultOgImage: image("default") } },
+    },
+  ];
+  const ogImage = (tags: ReturnType<typeof detail.meta>) =>
+    tags.find((t) => "property" in t && t.property === "og:image") as
+      { content: string } | undefined;
+
+  it("falls back to the park default when the attraction has no cover", () => {
+    const tags = detail.meta({
+      params: { slug: a.slug },
+      loaderData: { attraction: { ...a, cover: null } },
+      matches,
+    } as never);
+    expect(ogImage(tags)?.content).toMatch(/default-1600\.webp$/);
+  });
+
+  it("prefers the attraction cover over the park default", () => {
+    const tags = detail.meta({
+      params: { slug: a.slug },
+      loaderData: { attraction: { ...a, cover: image("c") } },
+      matches,
+    } as never);
+    expect(ogImage(tags)?.content).toMatch(/c-1600\.webp$/);
+  });
+});
+
 describe("splitParagraphs", () => {
   it("splits on blank lines, trims and drops empties", () => {
     expect(splitParagraphs(" a \n\n\n b\nstill b \n \n")).toEqual([

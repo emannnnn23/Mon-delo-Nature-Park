@@ -10,12 +10,15 @@
 import { data, useLoaderData, useRouteError } from "react-router";
 
 import { loadForClient } from "~/lib/routeData";
-import { mediaVariantUrl } from "~/lib/media";
-import { buildMeta, SITE_URL } from "~/lib/meta";
+import {
+  buildMeta,
+  defaultShareImage,
+  shareImageUrl,
+  SITE_URL,
+} from "~/lib/meta";
 import { AttractionPage } from "~/pages/AttractionPage";
 import { RouteErrorContent } from "~/pages/RouteErrorContent";
 import type { Attraction } from "~/types/content";
-import { pickFallbackSrc } from "~/utils/imageVariants";
 
 export type AttractionData = { attraction: Attraction };
 
@@ -55,21 +58,21 @@ export async function clientAttractionData(
 export function meta({
   params,
   loaderData,
+  matches,
 }: {
   params: { slug?: string };
   loaderData?: AttractionData;
+  matches?: Parameters<typeof defaultShareImage>[0];
 }) {
   const attraction = loaderData?.attraction;
-  const cover = attraction?.cover;
   return buildMeta({
     title: attraction?.name ?? "Page not found",
     description:
       attraction?.summary ??
       "This page could not be found at Mondelos Nature Park.",
     path: `/discover/${params.slug}`,
-    image: cover
-      ? mediaVariantUrl(pickFallbackSrc(cover.variants, 1600))
-      : null,
+    // The attraction's own cover wins over the park-wide default.
+    image: shareImageUrl(attraction?.cover) ?? defaultShareImage(matches),
     siteUrl: SITE_URL,
   });
 }

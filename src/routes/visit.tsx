@@ -1,16 +1,17 @@
 import { placeholders } from "~/content/placeholders";
-import { buildMeta, SITE_URL } from "~/lib/meta";
+import { buildMeta, defaultShareImage, SITE_URL } from "~/lib/meta";
 import { loadForBuild, loadForClient } from "~/lib/routeData";
 import type { ContactSubmit } from "~/components/forms/ContactForm";
 import { VisitPage } from "~/pages/VisitPage";
 
 import type { Route } from "./+types/visit";
 
-export function meta() {
+export function meta({ matches }: Route.MetaArgs) {
   return buildMeta({
     title: "Visit Us",
     description: "Plan your visit to Mondelos Nature Park in Kawayan, Biliran.",
     path: "/visit",
+    image: defaultShareImage(matches),
     siteUrl: SITE_URL,
   });
 }

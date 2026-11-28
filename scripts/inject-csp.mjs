@@ -3,7 +3,9 @@
 //   node scripts/inject-csp.mjs [buildDir=build/client] [supabaseUrl=$VITE_SUPABASE_URL]
 //
 // The site is static, so the policy cannot be an HTTP header per request. It is
-// a meta tag, first in <head>, listing the SHA-256 of every inline <script>
+// a meta tag, right after the charset meta (which must stay within the first
+// 1024 bytes of the page, and the policy is longer than that) and before any
+// script, listing the SHA-256 of every inline <script>
 // (the router state and the JSON-LD). Scripts with a `src` are covered by
 // 'self'. `frame-ancestors` cannot be set in a meta tag; vercel.json sends it.
 import { createHash } from "node:crypto";
@@ -55,6 +57,7 @@ export function buildCsp({ scriptHashes, supabaseUrl }) {
 const INLINE_SCRIPT = /<script\b([^>]*)>([^]*?)<\/script>/gi;
 const HAS_SRC = /\bsrc\s*=/i;
 const CSP_META = /<meta\s+http-equiv="Content-Security-Policy"[^>]*>/gi;
+const CHARSET_META = /<meta\s+charset\b[^>]*>/i;
 const HEAD_OPEN = /<head(?:\s[^>]*)?>/i;
 
 function escapeAttribute(value) {
@@ -66,8 +69,10 @@ function escapeAttribute(value) {
 }
 
 /**
- * Inserts the policy as the first child of <head>. A policy already there is
- * replaced, so running the injector twice leaves one meta tag.
+ * Inserts the policy right after the charset meta, or as the first child of
+ * <head> when the page has none. Either way it comes before every script. A
+ * policy already there is replaced, so running the injector twice leaves one
+ * meta tag.
  */
 export function injectCsp(html, supabaseUrl) {
   const page = html.replace(CSP_META, "");
@@ -80,7 +85,15 @@ export function injectCsp(html, supabaseUrl) {
 
   const head = HEAD_OPEN.exec(page);
   if (!head) throw new Error("injectCsp: the page has no <head> element");
-  const at = head.index + head[0].length;
+  const headEnd = head.index + head[0].length;
+  // Only a charset meta inside <head> counts, and only one that precedes the
+  // first script.
+  const charset = CHARSET_META.exec(page.slice(headEnd));
+  const firstScript = page.slice(headEnd).search(/<script\b/i);
+  const at =
+    charset && (firstScript === -1 || charset.index < firstScript)
+      ? headEnd + charset.index + charset[0].length
+      : headEnd;
   return page.slice(0, at) + meta + page.slice(at);
 }
 

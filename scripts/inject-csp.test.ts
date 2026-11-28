@@ -81,10 +81,34 @@ describe("injectCsp", () => {
     );
   });
 
-  it("puts the meta tag first in <head>", () => {
+  it("puts the meta tag right after the charset meta, before the title", () => {
     const out = injectCsp(page, "https://x.supabase.co");
     expect(out).toMatch(
-      /<head><meta http-equiv="Content-Security-Policy" content="[^"]*"\/><meta charSet/,
+      /<head><meta charSet="utf-8"\/><meta http-equiv="Content-Security-Policy" content="[^"]*"\/><title>/,
+    );
+  });
+
+  it("finds a lower-case charset meta too", () => {
+    const html =
+      '<html><head><meta charset="utf-8"><title>t</title></head><body></body></html>';
+    expect(injectCsp(html, "https://x.supabase.co")).toMatch(
+      /<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy"/,
+    );
+  });
+
+  it("goes first in <head> when there is no charset meta", () => {
+    const html = "<html><head><title>t</title></head><body></body></html>";
+    expect(injectCsp(html, "https://x.supabase.co")).toMatch(
+      /<head><meta http-equiv="Content-Security-Policy"[^>]*\/><title>/,
+    );
+  });
+
+  it("stays before a script even when the charset meta comes after it", () => {
+    const html =
+      '<html><head><script>a()</script><meta charset="utf-8"></head><body></body></html>';
+    const out = injectCsp(html, "https://x.supabase.co");
+    expect(out.indexOf("Content-Security-Policy")).toBeLessThan(
+      out.indexOf("<script"),
     );
   });
 

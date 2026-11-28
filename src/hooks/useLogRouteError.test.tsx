@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { createRoutesStub, data, useRouteError } from "react-router";
 
 import { AdminRouteError } from "~/admin/components/AdminRouteError";
@@ -43,7 +43,14 @@ describe.each([
       });
     });
     await screen.findByText(shown);
-    expect(logged()).toEqual([["Route error boundary: Error: db down"]]);
+    // The log is written by a passive effect, which may run after the
+    // boundary text appears.
+    await waitFor(() =>
+      expect(logged()).toEqual([["Route error boundary: Error: db down"]]),
+    );
+    // And it stays a single entry after any further effects have run.
+    await act(async () => {});
+    expect(logged()).toHaveLength(1);
   });
 
   it("does not log a 404", async () => {
@@ -51,6 +58,9 @@ describe.each([
       throw data(null, { status: 404 });
     });
     await screen.findByRole("heading");
+    // Flush pending effects first, so an absent log means "not written", not
+    // "not written yet".
+    await act(async () => {});
     expect(logged()).toHaveLength(0);
   });
 });

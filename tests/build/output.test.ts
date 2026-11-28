@@ -1,6 +1,7 @@
 // Checks the static site that `npm run build` writes. It needs an existing
 // build/client folder, so it skips (with a message) where there is none, such
 // as the unit-test job. The CI Build job runs it after the build.
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -105,5 +106,113 @@ describe.skipIf(!built)("build output", () => {
     for (const src of scripts) {
       expect(containsAdmin(read(src.slice(1))), src).toBe(false);
     }
+  });
+
+  describe("Content-Security-Policy", () => {
+    const htmlFiles = (dir = ""): string[] =>
+      readdirSync(join(BUILD_DIR, dir), { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory()
+          ? htmlFiles(join(dir, e.name))
+          : e.name.endsWith(".html")
+            ? [join(dir, e.name)]
+            : [],
+      );
+
+    it("covers the home page, the SPA fallback and the 404 page", () => {
+      const files = htmlFiles();
+      expect(files).toContain("index.html");
+      expect(files).toContain("__spa-fallback.html");
+      expect(files).toContain(join("404", "index.html"));
+    });
+
+    it("puts one policy first in <head> of every page, with every inline script hashed", () => {
+      for (const file of htmlFiles()) {
+        const html = read(file);
+        const metas =
+          html.match(/<meta http-equiv="Content-Security-Policy"/g) ?? [];
+        expect(metas, file).toHaveLength(1);
+        const head = html.match(
+          /<head><meta http-equiv="Content-Security-Policy" content="([^"]*)"\/>/,
+        );
+        if (!head) throw new Error(`${file}: policy not first in <head>`);
+        const csp = head[1];
+        expect(csp, file).toContain("script-src 'self' ");
+        for (const m of html.matchAll(/<script\b([^>]*)>([^]*?)<\/script>/g)) {
+          if (/\bsrc\s*=/.test(m[1])) continue;
+          const hash = `'sha256-${createHash("sha256").update(m[2]).digest("base64")}'`;
+          expect(csp, `${file}: ${hash}`).toContain(hash);
+        }
+      }
+    });
+  });
+
+  describe("vercel.json", () => {
+    type VercelConfig = {
+      rewrites: { source: string; destination: string }[];
+      headers: { source: string; headers: { key: string; value: string }[] }[];
+      cleanUrls: boolean;
+      trailingSlash: boolean;
+    };
+    const config = () =>
+      JSON.parse(
+        readFileSync(join(process.cwd(), "vercel.json"), "utf8"),
+      ) as VercelConfig;
+
+    it("denies framing and sets the security headers on every path", () => {
+      const all = config().headers.find((h) => h.source === "/(.*)");
+      const values = Object.fromEntries(
+        (all?.headers ?? []).map((h) => [h.key, h.value]),
+      );
+      expect(values["Content-Security-Policy"]).toBe("frame-ancestors 'none'");
+      expect(values["X-Content-Type-Options"]).toBe("nosniff");
+      expect(values["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
+      expect(values["Permissions-Policy"]).toBe(
+        "camera=(), microphone=(), geolocation=()",
+      );
+    });
+
+    it("caches hashed assets for a year", () => {
+      const assets = config().headers.find((h) => h.source === "/assets/(.*)");
+      expect(assets?.headers).toContainEqual({
+        key: "Cache-Control",
+        value: "public, max-age=31536000, immutable",
+      });
+    });
+
+    it("rewrites the admin and attraction pages to the SPA fallback file that exists", () => {
+      const { rewrites } = config();
+      const sources = rewrites.map((r) => r.source);
+      expect(sources).toContain("/admin/:path*");
+      expect(sources).toContain("/discover/:slug");
+      for (const r of rewrites) {
+        expect(r.destination).toBe("/__spa-fallback.html");
+      }
+      expect(existsSync(join(BUILD_DIR, "__spa-fallback.html"))).toBe(true);
+    });
+
+    it("sends other unknown pages to the SPA fallback, which shows the not-found page, but never assets or files", () => {
+      const catchAll = config().rewrites.at(-1);
+      if (!catchAll) throw new Error("vercel.json has no rewrites");
+      const matches = (path: string) =>
+        new RegExp(`^${catchAll.source}$`).test(path);
+      expect(matches("/no/such/page")).toBe(true);
+      expect(matches("/typo")).toBe(true);
+      expect(matches("/assets/missing.js")).toBe(false);
+      expect(matches("/sitemap.xml")).toBe(false);
+      expect(matches("/favicon.ico")).toBe(false);
+      expect(matches("/discover/x.data")).toBe(false);
+    });
+
+    it("pre-renders the not-found page with one noindex tag", () => {
+      const html = read("404/index.html");
+      expect(html.match(/<meta name="robots" content="noindex"\/>/g)).toHaveLength(
+        1,
+      );
+    });
+
+    it("uses clean URLs without trailing slashes", () => {
+      expect(config().cleanUrls).toBe(true);
+      expect(config().trailingSlash).toBe(false);
+    });
   });
 });

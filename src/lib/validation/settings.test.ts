@@ -1,6 +1,8 @@
 import { settingsColumns, settingsSchema } from "./settings";
 
 const good = {
+  parkName: "Mondelos Nature Park",
+  tagline: "",
   addressLine: "M8GV+8GP, Balaring Road, Kawayan, Biliran, Philippines",
   plusCode: "",
   latitude: "",
@@ -28,6 +30,30 @@ const messageFor = (extra: object, field: string) =>
 describe("settingsSchema", () => {
   it("accepts the seeded settings with every optional field empty", () => {
     expect(ok({})).toBe(true);
+  });
+
+  it("requires a park name, counted as the database does", () => {
+    expect(ok({ parkName: "" })).toBe(false);
+    expect(ok({ parkName: " \t\n " })).toBe(false);
+    expect(messageFor({ parkName: "" }, "parkName")).toMatch(/park.*name/i);
+    expect(ok({ parkName: "Ñ".repeat(300) })).toBe(true);
+    const parsed = parse({ parkName: "  Mondelos  " });
+    expect(parsed.success && parsed.data.parkName).toBe("Mondelos");
+  });
+
+  it("makes the tagline optional and stores an empty one as null", () => {
+    expect(ok({ tagline: "" })).toBe(true);
+    expect(ok({ tagline: "Rest easy." })).toBe(true);
+    const parsed = parse({ tagline: "   " });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(settingsColumns(parsed.data).tagline).toBeNull();
+      expect(settingsColumns(parsed.data).park_name).toBe(
+        "Mondelos Nature Park",
+      );
+    }
+    const set = parse({ tagline: " Rest easy. " });
+    expect(set.success && settingsColumns(set.data).tagline).toBe("Rest easy.");
   });
 
   it("requires an address", () => {
@@ -148,6 +174,8 @@ describe("settingsColumns", () => {
       defaultOgMediaId: "media-1",
     });
     expect(settingsColumns(data)).toEqual({
+      park_name: good.parkName,
+      tagline: null,
       address_line: good.addressLine,
       plus_code: null,
       latitude: 11.5,

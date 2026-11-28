@@ -4,8 +4,9 @@ import { extractMapEmbedUrl, isGoogleEmbed } from "~/lib/maps";
 import type { SettingsUpdate } from "~/types/db-helpers";
 
 /**
- * Contact and site settings. The rules mirror public.site_settings: an
- * address is required; links and social media are https addresses; the map
+ * Contact and site settings. The rules mirror public.site_settings: the park
+ * name and an address are required (the database has no upper length limit
+ * for either, nor for the tagline, which is optional); links and social media are https addresses; the map
  * must be a Google Maps embed; the phone uses the contact form's pattern; the
  * email is a valid address of at most 254 characters; the rating is 0 to 5
  * with one decimal and the review count a whole number from 0. Everything
@@ -39,6 +40,8 @@ const numberText = z.preprocess(
 
 export const settingsSchema = z
   .object({
+    parkName: text,
+    tagline: text,
     addressLine: text,
     plusCode: text,
     latitude: numberText,
@@ -59,6 +62,10 @@ export const settingsSchema = z
   .superRefine((value, ctx) => {
     const add = (path: string, message: string) =>
       ctx.addIssue({ code: "custom", path: [path], message });
+
+    if ([...value.parkName].length === 0) {
+      add("parkName", "Please enter the park's name.");
+    }
 
     if ([...value.addressLine].length === 0) {
       add("addressLine", "Please enter the park's address.");
@@ -141,6 +148,8 @@ const numberOrNull = (s: string) => (s === "" ? null : Number(s));
 /** The columns written for checked settings: empty optional fields are null. */
 export function settingsColumns(data: SettingsInput): SettingsUpdate {
   return {
+    park_name: data.parkName,
+    tagline: orNull(data.tagline),
     address_line: data.addressLine,
     plus_code: orNull(data.plusCode),
     latitude: numberOrNull(data.latitude),

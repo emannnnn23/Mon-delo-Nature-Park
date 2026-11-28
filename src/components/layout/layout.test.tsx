@@ -153,15 +153,19 @@ describe("SiteFooter", () => {
     expect(screen.queryByRole("link", { name: "YouTube" })).toBeNull();
   });
 
-  it("uses the fallback tagline, the configured one when set, and the year", () => {
-    const { unmount } = inRouter(
+  it("shows no tagline when none is set, the configured one when set, and the year", () => {
+    const { container, unmount } = inRouter(
       <SiteFooter settings={settings} year={2031} />,
     );
-    expect(
-      screen.getByText("Nature. Relaxation. Unforgettable Moments."),
-    ).toBeInTheDocument();
+    expect(container.querySelector("p.italic")).toBeNull();
+    expect(screen.queryByText(/Nature\. Relaxation/)).toBeNull();
     expect(screen.getByText(/© 2031 Mondelos/)).toBeInTheDocument();
     unmount();
+    const empty = inRouter(
+      <SiteFooter settings={{ ...settings, tagline: "" }} year={2031} />,
+    );
+    expect(empty.container.querySelector("p.italic")).toBeNull();
+    empty.unmount();
     inRouter(
       <SiteFooter
         settings={{ ...settings, tagline: "Rest easy." }}

@@ -9,14 +9,15 @@ type IntroSectionProps = {
   className?: string;
 };
 
-/** "Welcome to" block: park name, intro copy and a Learn More link. */
+/** "Welcome to" block: park name, intro copy and an optional button. */
 export function IntroSection({
   section,
   parkName,
   className = "",
 }: IntroSectionProps) {
-  const ctaHref = section?.ctaHref ?? "/about";
-  const ctaLabel = section?.ctaLabel ?? "Learn More";
+  // The owner clears the button's label or link to hide it: no fallback.
+  const ctaHref = section?.ctaHref || null;
+  const ctaLabel = section?.ctaLabel || null;
   return (
     <section id="welcome" className={`scroll-mt-24 ${className}`.trim()}>
       <SectionHeading
@@ -29,14 +30,16 @@ export function IntroSection({
           {section.body}
         </p>
       ) : null}
-      <Button
-        to={ctaHref}
-        variant="outline-dark"
-        icon={ArrowRight}
-        className="mt-8"
-      >
-        {ctaLabel}
-      </Button>
+      {ctaHref && ctaLabel ? (
+        <Button
+          to={ctaHref}
+          variant="outline-dark"
+          icon={ArrowRight}
+          className="mt-8"
+        >
+          {ctaLabel}
+        </Button>
+      ) : null}
     </section>
   );
 }

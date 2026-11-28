@@ -18,8 +18,6 @@ type SiteFooterProps = {
   year: number;
 };
 
-const FALLBACK_TAGLINE = "Nature. Relaxation. Unforgettable Moments.";
-
 const SOCIALS: {
   key: keyof SiteSettings["socials"];
   label: string;
@@ -45,9 +43,11 @@ export function SiteFooter({ settings, year }: SiteFooterProps) {
         <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1.3fr] lg:gap-0">
           <div className="flex flex-col items-start gap-4 lg:items-center lg:px-8 lg:text-center">
             <Logo tone="light" />
-            <p className="font-serif text-lg text-ivory-50/90 italic">
-              {settings.tagline ?? FALLBACK_TAGLINE}
-            </p>
+            {settings.tagline ? (
+              <p className="font-serif text-lg text-ivory-50/90 italic">
+                {settings.tagline}
+              </p>
+            ) : null}
           </div>
 
           <nav

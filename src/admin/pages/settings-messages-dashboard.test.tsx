@@ -105,6 +105,7 @@ describe("SettingsPage", () => {
       screen.getByRole("heading", { level: 1, name: "Contact & settings" }),
     ).toBeInTheDocument();
     for (const group of [
+      "Park details",
       "Location",
       "Contact",
       "Social media",
@@ -116,6 +117,71 @@ describe("SettingsPage", () => {
     expect(screen.getAllByRole("button", { name: /^Save/ })).toHaveLength(1);
     expect(screen.getByLabelText(/^Address/)).toHaveValue(
       "M8GV+8GP, Balaring Road, Kawayan, Biliran, Philippines",
+    );
+  });
+
+  it("puts Park details first, with plain-language hints", () => {
+    renderPage(
+      <SettingsPage
+        settings={settings({ tagline: "Rest easy." })}
+        media={[]}
+      />,
+    );
+    const groups = screen
+      .getAllByRole("group")
+      .map((g) => g.querySelector("legend")?.textContent);
+    expect(groups[0]).toBe("Park details");
+    expect(screen.getByLabelText(/^Park name/)).toHaveValue(
+      "Mondelos Nature Park",
+    );
+    expect(screen.getByLabelText(/^Tagline/)).toHaveValue("Rest easy.");
+    expect(
+      screen.getByText("Shown in the site header, page titles and footer."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "A short line under the park name in the footer. Leave empty to show none.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("saves the park name and tagline, an empty tagline as null", async () => {
+    vi.mocked(updateSettings).mockResolvedValue(
+      settings({ park_name: "Mondelos Park", tagline: "Rest easy." }),
+    );
+    renderPage(<SettingsPage settings={settings()} media={[]} />);
+    const name = screen.getByLabelText(/^Park name/);
+    await userEvent.clear(name);
+    await userEvent.type(name, "Mondelos Park");
+    await userEvent.type(screen.getByLabelText(/^Tagline/), "Rest easy.");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        park_name: "Mondelos Park",
+        tagline: "Rest easy.",
+      }),
+    );
+  });
+
+  it("sends an emptied tagline as null and refuses an empty park name", async () => {
+    vi.mocked(updateSettings).mockResolvedValue(settings());
+    renderPage(
+      <SettingsPage
+        settings={settings({ tagline: "Rest easy." })}
+        media={[]}
+      />,
+    );
+    await userEvent.clear(screen.getByLabelText(/^Park name/));
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    const name = screen.getByLabelText(/^Park name/);
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(name).toHaveFocus();
+    expect(updateSettings).not.toHaveBeenCalled();
+    await userEvent.type(name, "Mondelos");
+    await userEvent.clear(screen.getByLabelText(/^Tagline/));
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ park_name: "Mondelos", tagline: null }),
     );
   });
 

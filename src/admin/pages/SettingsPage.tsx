@@ -14,6 +14,8 @@ import type { MediaRow, SettingsRow } from "~/types/db-helpers";
 
 /** What the form edits. JSON-serialisable, so a draft can be kept. */
 export type SettingsFormValues = {
+  parkName: string;
+  tagline: string;
   addressLine: string;
   plusCode: string;
   latitude: string;
@@ -40,6 +42,8 @@ export function settingsFormValues(row: SettingsRow): SettingsFormValues {
   const text = (value: string | number | null) =>
     value === null ? "" : String(value);
   return {
+    parkName: row.park_name,
+    tagline: text(row.tagline),
     addressLine: row.address_line,
     plusCode: text(row.plus_code),
     latitude: text(row.latitude),
@@ -86,7 +90,7 @@ function Group({
 }
 
 /**
- * Where the park is, how to reach it, its social pages, its Google rating and
+ * The park's name and tagline, where the park is, how to reach it, its social pages, its Google rating and
  * the picture used when the site is shared. One Save for everything. Anything
  * left empty is simply not shown on the website.
  */
@@ -230,6 +234,17 @@ export function SettingsPage({ settings, media }: SettingsPageProps) {
         onSubmit={(e) => void handleSave(e)}
         className="mt-8 flex max-w-3xl flex-col gap-6"
       >
+        <Group title="Park details">
+          {text("parkName", "Park name", {
+            optional: false,
+            autoComplete: "off",
+            hint: "Shown in the site header, page titles and footer.",
+          })}
+          {text("tagline", "Tagline", {
+            hint: "A short line under the park name in the footer. Leave empty to show none.",
+          })}
+        </Group>
+
         <Group title="Location">
           {text("addressLine", "Address", {
             optional: false,

@@ -327,6 +327,7 @@ export function SectionEditor({
                 label="Button label"
                 name="ctaLabel"
                 error={errors.ctaLabel}
+                hint="Leave empty to hide the button."
               >
                 <input
                   type="text"
@@ -339,7 +340,7 @@ export function SectionEditor({
                 label="Button link"
                 name="ctaHref"
                 error={errors.ctaHref}
-                hint="A page on this site, like /visit, or a full address starting with https://"
+                hint="A page on this site, like /visit, or a full address starting with https://. Leave empty to hide the button."
               >
                 <input
                   type="text"

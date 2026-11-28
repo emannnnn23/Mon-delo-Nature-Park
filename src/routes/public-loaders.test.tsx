@@ -125,6 +125,12 @@ const newOne: Attraction = {
 };
 
 describe("public route clientLoaders", () => {
+  // The loaders `import()` this module on first use. Resolving it once up
+  // front keeps the cold import out of the first test's wait.
+  beforeAll(async () => {
+    await import("~/services/content");
+  });
+
   let warn: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     warn = vi.spyOn(console, "warn").mockImplementation(() => {});

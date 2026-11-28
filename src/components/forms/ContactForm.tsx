@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import {
   contactSchema,
   MESSAGE_MAX_LENGTH,
+  MIN_FILL_MS,
   type ContactInput,
 } from "../../lib/validation/contact";
 import { useHydrated } from "../../hooks/useHydrated";
@@ -78,6 +79,11 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
     }
   }, [status]);
 
+  const elapsedMs = () => {
+    mountedAt.current ??= Date.now();
+    return Date.now() - mountedAt.current;
+  };
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submittingRef.current || !onSubmit) return;
@@ -116,10 +122,20 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
     setStatus("sending");
     let outcome: ContactOutcome;
     try {
+      // The database silently discards a message sent within MIN_FILL_MS of
+      // the form appearing (anti-bot). A quick real visitor would be told
+      // "thank you" for a message that was never stored, so the send waits
+      // out the rest of that time first. Timers can fire a hair early, hence
+      // the loop on the clock rather than one fixed wait.
+      let remaining = MIN_FILL_MS - elapsedMs();
+      while (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+        remaining = MIN_FILL_MS - elapsedMs();
+      }
       outcome = await onSubmit({
         ...parsed.data,
         honeypot: text("website"),
-        elapsedMs: mountedAt.current ? Date.now() - mountedAt.current : 0,
+        elapsedMs: elapsedMs(),
       });
     } catch {
       outcome = "error";
@@ -198,8 +214,10 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
           messageTooLong ? " — too long" : ""
         }`}
         aria-invalid={messageTooLong || errors.message ? true : undefined}
+        // Count what the schema measures (trimmed code points), so "too
+        // long" never shows for a message the form accepts.
         onChange={(event) =>
-          setMessageLength([...event.currentTarget.value].length)
+          setMessageLength([...event.currentTarget.value.trim()].length)
         }
         error={errors.message}
       />

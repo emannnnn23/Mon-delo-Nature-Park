@@ -1,8 +1,25 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 
+import { MIN_FILL_MS } from "../../lib/validation/contact";
 import { ContactForm, type ContactSubmit } from "./ContactForm";
+
+// The form waits out the database's 3-second minimum before sending. These
+// tests move the clock instead, so only the "waits" test below runs a timer.
+let clockOffset = 0;
+beforeEach(() => {
+  clockOffset = 0;
+  const realNow = Date.now.bind(Date);
+  vi.spyOn(Date, "now").mockImplementation(() => realNow() + clockOffset);
+});
+afterEach(() => vi.restoreAllMocks());
 
 async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/full name/i), "Ana Reyes");
@@ -12,6 +29,7 @@ async function fillValid(user: ReturnType<typeof userEvent.setup>) {
     screen.getByLabelText(/message/i),
     "I would like to ask about visiting.",
   );
+  clockOffset = MIN_FILL_MS;
 }
 
 const sendButton = () => screen.getByRole("button", { name: /send message/i });
@@ -120,7 +138,7 @@ describe("ContactForm", () => {
     const arg = onSubmit.mock.calls[0][0];
     expect(arg.honeypot).toBe("");
     expect(typeof arg.elapsedMs).toBe("number");
-    expect(arg.elapsedMs).toBeGreaterThanOrEqual(0);
+    expect(arg.elapsedMs).toBeGreaterThanOrEqual(MIN_FILL_MS);
     expect(arg.fullName).toBe("Ana Reyes");
     expect(arg.phone).toBeUndefined();
     expect(
@@ -307,6 +325,20 @@ describe("ContactForm", () => {
     expect(message).toHaveValue("a".repeat(5001));
   });
 
+  it("counts the trimmed text, as the schema does, so padding never shows too long", () => {
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    const message = screen.getByLabelText(/message/i);
+    fireEvent.change(message, {
+      target: { value: `  ${"a".repeat(5000)}\n\n  ` },
+    });
+    expect(screen.getByText("5000 / 5000")).toBeInTheDocument();
+    expect(message).not.toHaveAttribute("aria-invalid");
+    fireEvent.change(message, {
+      target: { value: `  ${"a".repeat(5001)}  ` },
+    });
+    expect(screen.getByText("5001 / 5000 — too long")).toBeInTheDocument();
+  });
+
   it("flags an over-long message with words and aria-invalid, not live announcements", () => {
     render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
     const message = screen.getByLabelText(/message/i);
@@ -399,4 +431,61 @@ describe("ContactForm", () => {
       expect(line.textContent).not.toMatch(/@|\d{3}|tel|call|phone|e-?mail/i);
     },
   );
+});
+
+describe("ContactForm minimum fill time", () => {
+  const fill = () => {
+    const set = (label: RegExp, value: string) =>
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    set(/full name/i, "Ana Reyes");
+    set(/email/i, "ana@example.com");
+    set(/subject/i, "A question");
+    set(/message/i, "I would like to ask about visiting.");
+  };
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("waits for the rest of the 3 seconds, stays sending, then sends the real elapsed time", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const { container } = render(<ContactForm onSubmit={onSubmit} />);
+    fill();
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+
+    expect(screen.getByText(/sending/i)).toBeInTheDocument();
+    expect(sendButton()).toBeDisabled();
+    await act(() => vi.advanceTimersByTimeAsync(1999));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(sendButton()).toBeDisabled();
+    expect(screen.queryByText(/thank you/i)).not.toBeInTheDocument();
+
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0].elapsedMs).toBeGreaterThanOrEqual(
+      MIN_FILL_MS,
+    );
+    expect(screen.getByText(/thank you/i)).toBeInTheDocument();
+  });
+
+  it("does not wait when the form has been open long enough", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const { container } = render(<ContactForm onSubmit={onSubmit} />);
+    fill();
+    await act(() => vi.advanceTimersByTimeAsync(MIN_FILL_MS + 500));
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0].elapsedMs).toBe(MIN_FILL_MS + 500);
+  });
+
+  it("ignores a second submit during the wait", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const { container } = render(<ContactForm onSubmit={onSubmit} />);
+    fill();
+    const form = container.querySelector("form") as HTMLFormElement;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    await act(() => vi.advanceTimersByTimeAsync(MIN_FILL_MS));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
 });

@@ -136,7 +136,9 @@ describe("SettingsPage", () => {
     );
     expect(screen.getByLabelText(/^Tagline/)).toHaveValue("Rest easy.");
     expect(
-      screen.getByText("Shown in the site header, page titles and footer."),
+      screen.getByText(
+        "Used for search engines and map labels. The name in the site header and page titles is part of the site design.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(

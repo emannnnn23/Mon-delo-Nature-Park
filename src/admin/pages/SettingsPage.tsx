@@ -238,7 +238,7 @@ export function SettingsPage({ settings, media }: SettingsPageProps) {
           {text("parkName", "Park name", {
             optional: false,
             autoComplete: "off",
-            hint: "Shown in the site header, page titles and footer.",
+            hint: "Used for search engines and map labels. The name in the site header and page titles is part of the site design.",
           })}
           {text("tagline", "Tagline", {
             hint: "A short line under the park name in the footer. Leave empty to show none.",

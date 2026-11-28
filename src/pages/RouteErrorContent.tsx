@@ -1,4 +1,5 @@
 import { isRouteErrorResponse } from "react-router";
+import { useLogRouteError } from "~/hooks/useLogRouteError";
 import { RetryableErrorContent } from "./ErrorPage";
 import { NotFoundContent } from "./NotFoundPage";
 
@@ -8,6 +9,7 @@ import { NotFoundContent } from "./NotFoundPage";
  * the caller provides the main landmark.
  */
 export function RouteErrorContent({ error }: { error: unknown }) {
+  useLogRouteError(error);
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <NotFoundContent focusTitle />;
   }

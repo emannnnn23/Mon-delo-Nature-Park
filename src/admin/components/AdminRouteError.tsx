@@ -2,6 +2,7 @@ import { useId } from "react";
 import { useLocation, useRevalidator, useRouteError } from "react-router";
 
 import { Button } from "~/components/common/Button";
+import { useLogRouteError } from "~/hooks/useLogRouteError";
 import { toFriendlyError } from "~/services/admin/errors";
 
 import { isAdminListPath } from "../lib/listRoutes";
@@ -21,6 +22,7 @@ type AdminRouteErrorProps = {
  */
 export function AdminRouteError({ title, entity }: AdminRouteErrorProps) {
   const error = useRouteError();
+  useLogRouteError(error);
   const revalidator = useRevalidator();
   const { pathname } = useLocation();
   const titleId = useId();

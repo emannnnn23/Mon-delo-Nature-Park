@@ -2,11 +2,14 @@ import {
   data,
   isRouteErrorResponse,
   redirect,
+  useLocation,
   useRevalidator,
 } from "react-router";
 
 import { adminContext } from "~/admin/context";
+import { AdminListSkeleton } from "~/admin/components/AdminListSkeleton";
 import { AdminSpinner } from "~/admin/components/AdminSpinner";
+import { isAdminListPath } from "~/admin/lib/listRoutes";
 import { AdminErrorPage } from "~/admin/pages/AdminErrorPage";
 import { AdminUnavailablePage } from "~/admin/pages/AdminUnavailablePage";
 import { AdminLayout } from "~/admin/layouts/AdminLayout";
@@ -69,8 +72,18 @@ export function clientLoader({ context }: Route.ClientLoaderArgs) {
   return { email: session.email };
 }
 
+// Shown on a hard load or refresh until the guard and the page's data are
+// ready. A list page gets the list skeleton, with no shell: the sidebar needs
+// the signed-in email, which must not show before the guard has passed.
+// Everything else (dashboard, forms) keeps the spinner.
 export function HydrateFallback() {
-  return <AdminSpinner />;
+  const { pathname } = useLocation();
+  if (!isAdminListPath(pathname)) return <AdminSpinner />;
+  return (
+    <div className="min-h-screen bg-ivory-50 px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
+      <AdminListSkeleton />
+    </div>
+  );
 }
 
 export default function Admin({ loaderData }: Route.ComponentProps) {

@@ -18,6 +18,28 @@ import * as publicLayout from "./_public";
 import * as visit from "./visit";
 import { placeholders } from "~/content/placeholders";
 
+// No Supabase in unit tests: every live fetch fails, so the build-time
+// loaders fall back to the placeholder content (as a local build does).
+const content = vi.hoisted(() => {
+  const offline = () => vi.fn(() => Promise.reject(new Error("offline")));
+  return {
+    getSiteChrome: offline(),
+    getHomeContent: offline(),
+    getDiscoverContent: offline(),
+    getAttractionBySlug: offline(),
+    listPublishedAttractionSlugs: offline(),
+    getGalleryContent: offline(),
+    getAboutContent: offline(),
+    getVisitContent: offline(),
+  };
+});
+vi.mock("~/services/content", () => content);
+
+beforeEach(() => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+afterEach(() => vi.restoreAllMocks());
+
 type RouteModule = {
   default: ComponentType<{ loaderData: unknown; params: Params }>;
   loader?: (args: { params: Params }) => unknown;
@@ -101,21 +123,17 @@ describe("public route modules", () => {
     expect(h1).toHaveTextContent(known.name);
   });
 
-  it("detail loader throws a 404 response for an unknown slug", () => {
-    let thrown: unknown;
-    try {
-      detail.loader({ params: { slug: "x" } } as never);
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).toMatchObject({ init: { status: 404 } });
+  it("detail loader throws a 404 response for an unknown slug", async () => {
+    await expect(
+      detail.loader({ params: { slug: "x" } } as never),
+    ).rejects.toMatchObject({ init: { status: 404 } });
   });
 
-  it("detail loader returns the attraction for a known slug", () => {
+  it("detail loader returns the placeholder attraction for a known slug", async () => {
     if (!known) throw new Error("no placeholder attraction");
-    expect(detail.loader({ params: { slug: known.slug } } as never)).toEqual({
-      attraction: known,
-    });
+    await expect(
+      detail.loader({ params: { slug: known.slug } } as never),
+    ).resolves.toEqual({ attraction: known });
   });
 
   it("every route module exports meta; page routes export a loader", () => {
@@ -128,55 +146,51 @@ describe("public route modules", () => {
     expect("loader" in notFound).toBe(false);
   });
 
-  it("only the detail route exports a clientLoader", () => {
-    for (const mod of [home, discover, gallery, about, visit, notFound]) {
-      expect("clientLoader" in mod).toBe(false);
+  it("every page route refreshes live through a hydrating clientLoader", () => {
+    for (const mod of [
+      publicLayout,
+      home,
+      discover,
+      detail,
+      gallery,
+      about,
+      visit,
+    ]) {
+      const clientLoader = (mod as { clientLoader?: { hydrate?: boolean } })
+        .clientLoader;
+      expect(typeof clientLoader).toBe("function");
+      expect(clientLoader?.hydrate).toBe(true);
+      // A HydrateFallback would replace the pre-rendered HTML on hydration.
+      expect("HydrateFallback" in mod).toBe(false);
     }
-  });
-
-  // A slug that was not prerendered is served the SPA fallback, which has no
-  // `.data` file to fetch; the clientLoader must answer it in the browser.
-  describe("detail clientLoader", () => {
-    type ClientLoader = ((args: { params: Params }) => unknown) & {
-      hydrate?: boolean;
-    };
-    const clientLoader = (detail as unknown as { clientLoader: ClientLoader })
-      .clientLoader;
-
-    it("runs on hydration", () => {
-      expect(clientLoader.hydrate).toBe(true);
-    });
-
-    it("returns the attraction for a known slug", () => {
-      if (!known) throw new Error("no placeholder attraction");
-      expect(clientLoader({ params: { slug: known.slug } })).toEqual({
-        attraction: known,
-      });
-    });
-
-    it("throws a 404 response for an unknown slug", () => {
-      let thrown: unknown;
-      try {
-        clientLoader({ params: { slug: "not-a-real-place" } });
-      } catch (error) {
-        thrown = error;
-      }
-      expect(thrown).toMatchObject({ init: { status: 404 } });
-    });
+    expect("clientLoader" in notFound).toBe(false);
   });
 });
 
 describe("public layout route", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("puts the footer year in both loaders, so prerender and hydration agree", () => {
-    vi.useFakeTimers();
+  it("puts the footer year in both loaders, so prerender and hydration agree", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2030-06-01T12:00:00Z"));
-    const client = publicLayout.clientLoader as unknown as () => {
+    const client = publicLayout.clientLoader as unknown as (args: {
+      serverLoader: () => Promise<unknown>;
+    }) => Promise<{ year: number }>;
+    const server = publicLayout.loader as unknown as () => Promise<{
       year: number;
-    };
-    const server = publicLayout.loader as unknown as () => { year: number };
-    expect(server().year).toBe(2030);
-    expect(client().year).toBe(2030);
+    }>;
+    // The build falls back to placeholders here; the browser reads live.
+    expect((await server()).year).toBe(2030);
+    content.getSiteChrome.mockImplementationOnce(
+      () =>
+        Promise.resolve({
+          settings: placeholders.settings,
+          announcement: null,
+        }) as never,
+    );
+    expect(
+      (await client({ serverLoader: () => Promise.reject(new Error("x")) }))
+        .year,
+    ).toBe(2030);
   });
 });

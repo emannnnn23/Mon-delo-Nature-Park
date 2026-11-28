@@ -576,6 +576,36 @@ describe("Photos tab: captions", () => {
   });
 });
 
+describe("hidden categories in the selects", () => {
+  const optionNames = (select: HTMLElement) =>
+    within(select)
+      .getAllByRole("option")
+      .map((o) => o.textContent);
+
+  it("marks an unpublished category (hidden) in the filter and every photo select", () => {
+    renderGallery({ images: [image("a", { caption: "Mist" })] });
+    for (const select of [
+      screen.getByLabelText("Show photos in"),
+      screen.getByLabelText("Category for photo 1"),
+    ]) {
+      const names = optionNames(select);
+      expect(names).toContain("Trails (hidden)");
+      expect(names).toContain("Waterfalls");
+      expect(names).not.toContain("Waterfalls (hidden)");
+      expect(names).not.toContain("Trails");
+    }
+  });
+
+  it("explains that photos in a hidden category still appear under All", () => {
+    renderGallery({ images: [image("a", { caption: "Mist" })] });
+    expect(
+      screen.getAllByText(
+        "Photos in a hidden category still appear under All on the public gallery.",
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
 describe("Photos tab: filter by category", () => {
   const rows = [
     image("a", { caption: "Mist", sort_order: 1, category_id: WATERFALLS }),
@@ -658,7 +688,7 @@ describe("Photos tab: tile edge cases", () => {
       entry: `/admin/gallery?category=${WATERFALLS}`,
     });
     const select = screen.getByLabelText("Category for photo 1");
-    await userEvent.selectOptions(select, "Trails");
+    await userEvent.selectOptions(select, "Trails (hidden)");
     await waitFor(() =>
       expect(screen.queryByRole("group", { name: "Mist" })).toBeNull(),
     );
@@ -678,7 +708,7 @@ describe("Photos tab: tile edge cases", () => {
     });
     await userEvent.selectOptions(
       screen.getByLabelText("Category for photo 1"),
-      "Trails",
+      "Trails (hidden)",
     );
     await waitFor(() =>
       expect(screen.getByLabelText("Show photos in")).toHaveFocus(),
@@ -692,7 +722,7 @@ describe("Photos tab: tile edge cases", () => {
     }));
     renderGallery({ images: [waterfall("a", "Mist", 1)] });
     const select = screen.getByLabelText("Category for photo 1");
-    await userEvent.selectOptions(select, "Trails");
+    await userEvent.selectOptions(select, "Trails (hidden)");
     await waitFor(() => expect(updateRow).toHaveBeenCalled());
     expect(screen.getByLabelText("Show photos in")).not.toHaveFocus();
   });

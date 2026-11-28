@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { IntroSection } from "./IntroSection";
 import { HERO_DEFAULT_IMAGE } from "../../content/heroDefault";
 import { placeholders } from "../../content/placeholders";
 import { selectHomeContent } from "../../lib/homeContent";
@@ -259,6 +260,55 @@ describe("Intro and experiences", () => {
     expect(
       within(intro).getByRole("link", { name: /learn more/i }),
     ).toHaveAttribute("href", "/about");
+  });
+
+  it("shows no button when the label or the link was cleared", () => {
+    const section = {
+      key: "intro",
+      eyebrow: "WELCOME TO",
+      heading: "Mondelos Nature Park",
+      body: "Hello.",
+      ctaLabel: "Learn More",
+      ctaHref: "/about",
+      image: null,
+      isSample: false,
+    };
+    const cases = [
+      { ctaLabel: null, ctaHref: null },
+      { ctaLabel: null, ctaHref: "/about" },
+      { ctaLabel: "Learn More", ctaHref: null },
+      { ctaLabel: "", ctaHref: "/about" },
+      { ctaLabel: "Learn More", ctaHref: "" },
+    ];
+    for (const cleared of cases) {
+      const { container, unmount } = render(
+        <MemoryRouter>
+          <IntroSection
+            section={{ ...section, ...cleared }}
+            parkName="Mondelos Nature Park"
+          />
+        </MemoryRouter>,
+      );
+      expect(container.querySelector("a")).toBeNull();
+      expect(screen.queryByText(/learn more/i)).toBeNull();
+      unmount();
+    }
+    const none = render(
+      <MemoryRouter>
+        <IntroSection section={null} parkName="Mondelos Nature Park" />
+      </MemoryRouter>,
+    );
+    expect(none.container.querySelector("a")).toBeNull();
+    none.unmount();
+    render(
+      <MemoryRouter>
+        <IntroSection section={section} parkName="Mondelos Nature Park" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: /learn more/i })).toHaveAttribute(
+      "href",
+      "/about",
+    );
   });
 
   it("renders four experience cards, each tagged Sample", () => {

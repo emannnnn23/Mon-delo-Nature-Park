@@ -5,6 +5,7 @@ import { CONTROL_CLASS, FormField } from "~/admin/components/FormField";
 import { PublishToggle } from "~/admin/components/PublishToggle";
 import { ReorderButtons } from "~/admin/components/ReorderButtons";
 import { SampleBadge } from "~/admin/components/SampleBadge";
+import { HIDDEN_CATEGORY_HINT, categoryLabel } from "~/admin/lib/categoryLabel";
 import { mediaPreviewUrl } from "~/admin/lib/mediaImage";
 import { Button } from "~/components/common/Button";
 import { useFormDraft } from "~/hooks/useFormDraft";
@@ -181,7 +182,17 @@ export function GalleryPhotoTile({
           </div>
         </form>
 
-        <FormField label={`Category for photo ${number}`} name="category">
+        <FormField
+          label={`Category for photo ${number}`}
+          name="category"
+          hint={
+            categories.some(
+              (c) => c.id === image.category_id && !c.is_published,
+            )
+              ? HIDDEN_CATEGORY_HINT
+              : undefined
+          }
+        >
           <select
             value={image.category_id ?? ""}
             disabled={busy}
@@ -191,7 +202,7 @@ export function GalleryPhotoTile({
             <option value="">No category</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {categoryLabel(c)}
               </option>
             ))}
           </select>

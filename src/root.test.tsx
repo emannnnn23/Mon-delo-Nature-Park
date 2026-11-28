@@ -43,10 +43,13 @@ describe("root ErrorBoundary", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "Something went wrong",
+        name: "We couldn't load this page",
       }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute(
       "href",
       "/",

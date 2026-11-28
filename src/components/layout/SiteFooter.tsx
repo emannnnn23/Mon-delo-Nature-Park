@@ -18,8 +18,6 @@ type SiteFooterProps = {
   year: number;
 };
 
-const FALLBACK_TAGLINE = "Nature. Relaxation. Unforgettable Moments.";
-
 const SOCIALS: {
   key: keyof SiteSettings["socials"];
   label: string;
@@ -45,9 +43,11 @@ export function SiteFooter({ settings, year }: SiteFooterProps) {
         <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1.3fr] lg:gap-0">
           <div className="flex flex-col items-start gap-4 lg:items-center lg:px-8 lg:text-center">
             <Logo tone="light" />
-            <p className="font-serif text-lg text-ivory-50/90 italic">
-              {settings.tagline ?? FALLBACK_TAGLINE}
-            </p>
+            {settings.tagline ? (
+              <p className="font-serif text-lg text-ivory-50/90 italic">
+                {settings.tagline}
+              </p>
+            ) : null}
           </div>
 
           <nav
@@ -66,13 +66,15 @@ export function SiteFooter({ settings, year }: SiteFooterProps) {
           </nav>
 
           <div className="flex flex-col items-start gap-3 lg:border-l lg:border-ivory-50/15 lg:px-8">
-            <p className="flex items-start gap-3">
-              <MapPin
-                aria-hidden="true"
-                className="mt-0.5 size-5 shrink-0 text-gold-500"
-              />
-              <span>{addressLine}</span>
-            </p>
+            {addressLine ? (
+              <p className="flex items-start gap-3">
+                <MapPin
+                  aria-hidden="true"
+                  className="mt-0.5 size-5 shrink-0 text-gold-500"
+                />
+                <span>{addressLine}</span>
+              </p>
+            ) : null}
             {phone ? (
               <a
                 href={`tel:${phone.replace(/[^\d+]/g, "")}`}

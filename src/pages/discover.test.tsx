@@ -16,6 +16,16 @@ import * as detail from "~/routes/discover.$slug";
 import type { Attraction, MediaAsset } from "~/types/content";
 import { splitParagraphs } from "~/utils/text";
 
+// Without Supabase (as in a local build) the detail loader uses the
+// placeholders.
+vi.mock("~/services/content", () => ({
+  getAttractionBySlug: () => Promise.reject(new Error("offline")),
+}));
+beforeEach(() => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+afterEach(() => vi.restoreAllMocks());
+
 import { AttractionPage } from "./AttractionPage";
 import { DiscoverPage, type DiscoverPageProps } from "./DiscoverPage";
 
@@ -274,18 +284,17 @@ describe("detail route", () => {
     );
     expect(screen.queryByRole("main")).toBeNull();
     expect(
-      screen.getByRole("heading", { level: 1, name: "Something went wrong" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "We couldn't load this page",
+      }),
     ).toBeInTheDocument();
   });
 
-  it("does not resolve an experience slug", () => {
-    let thrown: unknown;
-    try {
-      detail.loader({ params: { slug: experiences[0].slug } } as never);
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).toMatchObject({ init: { status: 404 } });
+  it("does not resolve an experience slug", async () => {
+    await expect(
+      detail.loader({ params: { slug: experiences[0].slug } } as never),
+    ).rejects.toMatchObject({ init: { status: 404 } });
   });
 
   it("uses the summary and cover for meta", () => {
@@ -304,6 +313,37 @@ describe("detail route", () => {
           String(t.content).endsWith("c-1600.webp"),
       ),
     ).toBe(true);
+  });
+});
+
+describe("attraction meta share image", () => {
+  const a = attractions[0];
+  const matches = [
+    {
+      id: "routes/_public",
+      data: { settings: { defaultOgImage: image("default") } },
+    },
+  ];
+  const ogImage = (tags: ReturnType<typeof detail.meta>) =>
+    tags.find((t) => "property" in t && t.property === "og:image") as
+      { content: string } | undefined;
+
+  it("falls back to the park default when the attraction has no cover", () => {
+    const tags = detail.meta({
+      params: { slug: a.slug },
+      loaderData: { attraction: { ...a, cover: null } },
+      matches,
+    } as never);
+    expect(ogImage(tags)?.content).toMatch(/default-1600\.webp$/);
+  });
+
+  it("prefers the attraction cover over the park default", () => {
+    const tags = detail.meta({
+      params: { slug: a.slug },
+      loaderData: { attraction: { ...a, cover: image("c") } },
+      matches,
+    } as never);
+    expect(ogImage(tags)?.content).toMatch(/c-1600\.webp$/);
   });
 });
 

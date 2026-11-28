@@ -97,4 +97,31 @@ describe("contactSchema", () => {
       contactSchema.safeParse({ ...valid, message: "a".repeat(5000) }).success,
     ).toBe(true);
   });
+
+  it("counts code points, not UTF-16 units, like the database", () => {
+    // U+1F33F is one character for Postgres but two UTF-16 units.
+    const leaf = "\u{1F33F}";
+    expect(
+      contactSchema.safeParse({ ...valid, message: leaf.repeat(5000) }).success,
+    ).toBe(true);
+    expect(
+      contactSchema.safeParse({ ...valid, message: leaf.repeat(5001) }).success,
+    ).toBe(false);
+    expect(
+      contactSchema.safeParse({ ...valid, fullName: leaf.repeat(100) }).success,
+    ).toBe(true);
+    expect(
+      contactSchema.safeParse({ ...valid, subject: leaf.repeat(150) }).success,
+    ).toBe(true);
+    // Two code points satisfy the 2-character minimum.
+    expect(
+      contactSchema.safeParse({ ...valid, fullName: leaf.repeat(2) }).success,
+    ).toBe(true);
+    expect(
+      contactSchema.safeParse({ ...valid, message: leaf.repeat(10) }).success,
+    ).toBe(true);
+    expect(
+      contactSchema.safeParse({ ...valid, message: leaf.repeat(9) }).success,
+    ).toBe(false);
+  });
 });

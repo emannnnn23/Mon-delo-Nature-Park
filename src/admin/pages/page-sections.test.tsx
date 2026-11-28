@@ -141,6 +141,22 @@ describe("PageSectionsPage", () => {
     expect(within(region).getByLabelText("Button link")).toHaveValue("/about");
   });
 
+  it("tells the owner how to hide the button", async () => {
+    renderPage();
+    await userEvent.click(
+      screen.getByRole("button", { name: /Welcome introduction/ }),
+    );
+    const region = screen.getByRole("region", {
+      name: /Welcome introduction/,
+    });
+    expect(
+      within(region).getByLabelText("Button label"),
+    ).toHaveAccessibleDescription("Leave empty to hide the button.");
+    expect(
+      within(region).getByLabelText("Button link"),
+    ).toHaveAccessibleDescription(/Leave empty to hide the button\./);
+  });
+
   it("uses plain words for the fields", async () => {
     renderPage();
     const region = await openSection("Welcome introduction");

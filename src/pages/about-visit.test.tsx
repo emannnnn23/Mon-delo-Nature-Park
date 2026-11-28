@@ -6,6 +6,17 @@ import * as aboutRoute from "~/routes/about";
 import * as visitRoute from "~/routes/visit";
 import type { Faq, PageSection } from "~/types/content";
 
+vi.mock("~/services/content", () => {
+  const offline = () => Promise.reject(new Error("offline"));
+  return {
+    getAboutContent: offline,
+    getVisitContent: offline,
+    getSiteChrome: offline,
+    listPublishedAttractionSlugs: offline,
+  };
+});
+afterEach(() => vi.restoreAllMocks());
+
 import { AboutPage } from "./AboutPage";
 import { VisitPage, type VisitPageProps } from "./VisitPage";
 
@@ -41,12 +52,14 @@ const faq = (n: number): Faq => ({
 });
 
 describe("routes", () => {
-  it("load their content at build time", () => {
-    expect(aboutRoute.loader()).toEqual({
+  // Without Supabase (as in a local build) the loaders use the placeholders.
+  it("load their content at build time", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(aboutRoute.loader()).resolves.toEqual({
       sections: placeholders.sections.about,
       hasAttractions: true,
     });
-    expect(visitRoute.loader()).toEqual({
+    await expect(visitRoute.loader()).resolves.toEqual({
       sections: placeholders.sections.visit,
       faqs: placeholders.faqs,
       settings: placeholders.settings,

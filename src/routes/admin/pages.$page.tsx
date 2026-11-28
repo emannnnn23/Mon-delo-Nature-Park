@@ -1,10 +1,10 @@
 import { data, isRouteErrorResponse, useRouteError } from "react-router";
 
+import { AdminRouteError } from "~/admin/components/AdminRouteError";
 import { PAGE_TITLES, isPageKey } from "~/admin/lib/sectionLabels";
 import { AdminNotFoundPage } from "~/admin/pages/AdminNotFoundPage";
 import { PageSectionsPage } from "~/admin/pages/PageSectionsPage";
 import { listRows } from "~/services/admin/crud";
-import { toFriendlyError } from "~/services/admin/errors";
 import { listMedia } from "~/services/media";
 import type { Route } from "./+types/pages.$page";
 
@@ -44,18 +44,5 @@ export function ErrorBoundary() {
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <AdminNotFoundPage />;
   }
-  const { friendly } = toFriendlyError(error, { entity: "section" });
-  return (
-    <section aria-labelledby="page-sections-error-title">
-      <h1
-        id="page-sections-error-title"
-        className="font-serif text-3xl font-bold text-forest-900"
-      >
-        Page sections
-      </h1>
-      <p role="alert" className="mt-3 max-w-xl font-semibold text-red-700">
-        {friendly}
-      </p>
-    </section>
-  );
+  return <AdminRouteError title="Page sections" entity="section" />;
 }

@@ -1,14 +1,17 @@
 import { placeholders } from "~/content/placeholders";
 import { homeMetaDescription, selectHomeContent } from "~/lib/homeContent";
-import { buildMeta, SITE_URL } from "~/lib/meta";
+import { serializeJsonLd, touristAttractionJsonLd } from "~/lib/jsonLd";
+import { buildMeta, defaultShareImage, SITE_URL } from "~/lib/meta";
+import { loadForBuild, loadForClient } from "~/lib/routeData";
 import { HomePage } from "~/pages/HomePage";
 
 import type { Route } from "./+types/home";
 
-export function meta({ loaderData }: Route.MetaArgs) {
+export function meta({ loaderData, matches }: Route.MetaArgs) {
   return buildMeta({
     description: homeMetaDescription(loaderData?.sections ?? []),
     path: "/",
+    image: defaultShareImage(matches),
     siteUrl: SITE_URL,
   });
 }
@@ -17,17 +20,43 @@ export function meta({ loaderData }: Route.MetaArgs) {
 // fetchpriority="high" <img> in the prerendered HTML, and it follows whichever
 // image the hero shows, so a CMS hero image is never shadowed by a static one.
 
-// Build-time loader (ruling P2-R9). Phase 4 swaps placeholders for Supabase.
-export function loader() {
-  return selectHomeContent({
-    settings: placeholders.settings,
-    sections: placeholders.sections.home,
-    attractions: placeholders.attractions,
-    galleryImages: placeholders.galleryImages,
-    testimonials: placeholders.testimonials,
-  });
+// Shared by both loaders (`clientLoader` must never call the build-stripped
+// `loader`). `import()` keeps supabase-js out of the initial page chunks.
+async function liveHome() {
+  const { getHomeContent } = await import("~/services/content");
+  return getHomeContent();
 }
 
+export function loader() {
+  return loadForBuild(
+    liveHome,
+    selectHomeContent({
+      settings: placeholders.settings,
+      sections: placeholders.sections.home,
+      attractions: placeholders.attractions,
+      galleryImages: placeholders.galleryImages,
+      testimonials: placeholders.testimonials,
+    }),
+  );
+}
+
+export function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
+  return loadForClient(liveHome, () => serverLoader());
+}
+clientLoader.hydrate = true as const;
+
 export default function Home({ loaderData }: Route.ComponentProps) {
-  return <HomePage {...loaderData} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(
+            touristAttractionJsonLd(loaderData.settings, `${SITE_URL}/`),
+          ),
+        }}
+      />
+      <HomePage {...loaderData} />
+    </>
+  );
 }

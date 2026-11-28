@@ -1,8 +1,25 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 
+import { MIN_FILL_MS } from "../../lib/validation/contact";
 import { ContactForm, type ContactSubmit } from "./ContactForm";
+
+// The form waits out the database's 3-second minimum before sending. These
+// tests move the clock instead, so only the "waits" test below runs a timer.
+let clockOffset = 0;
+beforeEach(() => {
+  clockOffset = 0;
+  const realNow = Date.now.bind(Date);
+  vi.spyOn(Date, "now").mockImplementation(() => realNow() + clockOffset);
+});
+afterEach(() => vi.restoreAllMocks());
 
 async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/full name/i), "Ana Reyes");
@@ -12,6 +29,7 @@ async function fillValid(user: ReturnType<typeof userEvent.setup>) {
     screen.getByLabelText(/message/i),
     "I would like to ask about visiting.",
   );
+  clockOffset = MIN_FILL_MS;
 }
 
 const sendButton = () => screen.getByRole("button", { name: /send message/i });
@@ -120,7 +138,7 @@ describe("ContactForm", () => {
     const arg = onSubmit.mock.calls[0][0];
     expect(arg.honeypot).toBe("");
     expect(typeof arg.elapsedMs).toBe("number");
-    expect(arg.elapsedMs).toBeGreaterThanOrEqual(0);
+    expect(arg.elapsedMs).toBeGreaterThanOrEqual(MIN_FILL_MS);
     expect(arg.fullName).toBe("Ana Reyes");
     expect(arg.phone).toBeUndefined();
     expect(
@@ -215,5 +233,259 @@ describe("ContactForm", () => {
     await user.click(sendButton());
     const text = await screen.findByText(/thank you/i);
     expect(text.closest("[aria-live='polite']")).not.toBeNull();
+  });
+
+  it("sends once on a double click", async () => {
+    const onSubmit = vi
+      .fn<ContactSubmit>()
+      .mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve("ok"), 20)),
+      );
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.dblClick(sendButton());
+    await screen.findByText(/thank you/i);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets the ref, not the disabled button, stop a repeat submit while one is pending", async () => {
+    // The submit event is fired on the form itself, so the disabled button
+    // cannot stop it: only the ref guard can, even after React re-rendered.
+    let resolve: (v: "ok") => void = () => {};
+    const onSubmit = vi.fn<ContactSubmit>().mockImplementation(
+      () =>
+        new Promise((r) => {
+          resolve = r;
+        }),
+    );
+    const user = userEvent.setup();
+    const { container } = render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    const form = container.querySelector("form") as HTMLFormElement;
+    fireEvent.submit(form);
+    await waitFor(() => expect(sendButton()).toBeDisabled());
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    resolve("ok");
+    await screen.findByText(/thank you/i);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows another send after a failed one", async () => {
+    const onSubmit = vi
+      .fn<ContactSubmit>()
+      .mockResolvedValueOnce("error")
+      .mockResolvedValueOnce("ok");
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.click(sendButton());
+    await screen.findByText(/something went wrong/i);
+    expect(sendButton()).toBeEnabled();
+    await user.click(sendButton());
+    await screen.findByText(/thank you/i);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("allows another send after a rejected one", async () => {
+    const onSubmit = vi
+      .fn<ContactSubmit>()
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce("ok");
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.click(sendButton());
+    await screen.findByText(/something went wrong/i);
+    await user.click(sendButton());
+    await screen.findByText(/thank you/i);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a live character count against the real limit", async () => {
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    const message = screen.getByLabelText(/message/i);
+    expect(screen.getByText("0 / 5000")).toBeInTheDocument();
+    await user.type(message, "Hello there");
+    expect(screen.getByText("11 / 5000")).toBeInTheDocument();
+    expect(message).toHaveAccessibleDescription("11 / 5000");
+  });
+
+  it("counts characters the way the database does and never truncates", () => {
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    const message = screen.getByLabelText(/message/i);
+    expect(message).not.toHaveAttribute("maxlength");
+    fireEvent.change(message, { target: { value: "\u{1F33F}".repeat(3) } });
+    expect(screen.getByText("3 / 5000")).toBeInTheDocument();
+    fireEvent.change(message, { target: { value: "a".repeat(5001) } });
+    expect(screen.getByText("5001 / 5000 — too long")).toBeInTheDocument();
+    expect(message).toHaveValue("a".repeat(5001));
+  });
+
+  it("counts the trimmed text, as the schema does, so padding never shows too long", () => {
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    const message = screen.getByLabelText(/message/i);
+    fireEvent.change(message, {
+      target: { value: `  ${"a".repeat(5000)}\n\n  ` },
+    });
+    expect(screen.getByText("5000 / 5000")).toBeInTheDocument();
+    expect(message).not.toHaveAttribute("aria-invalid");
+    fireEvent.change(message, {
+      target: { value: `  ${"a".repeat(5001)}  ` },
+    });
+    expect(screen.getByText("5001 / 5000 — too long")).toBeInTheDocument();
+  });
+
+  it("flags an over-long message with words and aria-invalid, not live announcements", () => {
+    render(<ContactForm onSubmit={vi.fn<ContactSubmit>()} />);
+    const message = screen.getByLabelText(/message/i);
+    fireEvent.change(message, { target: { value: "a".repeat(5000) } });
+    expect(screen.getByText("5000 / 5000")).toBeInTheDocument();
+    expect(message).not.toHaveAttribute("aria-invalid");
+    fireEvent.change(message, { target: { value: "a".repeat(5001) } });
+    const hint = screen.getByText("5001 / 5000 — too long");
+    expect(message).toHaveAttribute("aria-invalid", "true");
+    expect(message).toHaveAccessibleDescription("5001 / 5000 — too long");
+    expect(hint.closest("[aria-live]")).toBeNull();
+    expect(hint).not.toHaveAttribute("role");
+    fireEvent.change(message, { target: { value: "a".repeat(4000) } });
+    expect(message).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByText("4000 / 5000")).toBeInTheDocument();
+  });
+
+  it("explains an over-long message on submit instead of cutting it", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    fireEvent.change(screen.getByLabelText(/message/i), {
+      target: { value: "a".repeat(5001) },
+    });
+    await user.click(sendButton());
+    expect(
+      await screen.findByText(/5000 characters or fewer/i),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("resets the count after a successful send", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.click(sendButton());
+    await screen.findByText(/thank you/i);
+    expect(screen.getByText("0 / 5000")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["ok", /thank you/i],
+    ["rate_limited", /several messages recently/i],
+    ["error", /something went wrong/i],
+  ] as const)(
+    "moves focus to the status line after %s",
+    async (outcome, text) => {
+      const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue(outcome);
+      const user = userEvent.setup();
+      render(<ContactForm onSubmit={onSubmit} />);
+      await fillValid(user);
+      await user.click(sendButton());
+      const line = (await screen.findByText(text)).closest("[role='status']");
+      expect(line).not.toBeNull();
+      expect(line).toHaveAttribute("aria-live", "polite");
+      await waitFor(() => expect(line).toHaveFocus());
+    },
+  );
+
+  it("keeps focus where it is until a result arrives", async () => {
+    const onSubmit = vi
+      .fn<ContactSubmit>()
+      .mockImplementation(() => new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<ContactForm onSubmit={onSubmit} />);
+    await fillValid(user);
+    await user.click(sendButton());
+    await screen.findByText(/sending/i);
+    expect(screen.getByRole("status")).not.toHaveFocus();
+  });
+
+  it.each([
+    ["ok", /thank you/i],
+    ["rate_limited", /several messages recently/i],
+    ["error", /something went wrong/i],
+  ] as const)(
+    "never invents contact details in the %s message",
+    async (outcome, text) => {
+      const user = userEvent.setup();
+      render(
+        <ContactForm
+          onSubmit={vi.fn<ContactSubmit>().mockResolvedValue(outcome)}
+        />,
+      );
+      await fillValid(user);
+      await user.click(sendButton());
+      const line = await screen.findByText(text);
+      expect(line.textContent).not.toMatch(/@|\d{3}|tel|call|phone|e-?mail/i);
+    },
+  );
+});
+
+describe("ContactForm minimum fill time", () => {
+  const fill = () => {
+    const set = (label: RegExp, value: string) =>
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    set(/full name/i, "Ana Reyes");
+    set(/email/i, "ana@example.com");
+    set(/subject/i, "A question");
+    set(/message/i, "I would like to ask about visiting.");
+  };
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("waits for the rest of the 3 seconds, stays sending, then sends the real elapsed time", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const { container } = render(<ContactForm onSubmit={onSubmit} />);
+    fill();
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+
+    expect(screen.getByText(/sending/i)).toBeInTheDocument();
+    expect(sendButton()).toBeDisabled();
+    await act(() => vi.advanceTimersByTimeAsync(1999));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(sendButton()).toBeDisabled();
+    expect(screen.queryByText(/thank you/i)).not.toBeInTheDocument();
+
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0].elapsedMs).toBeGreaterThanOrEqual(
+      MIN_FILL_MS,
+    );
+    expect(screen.getByText(/thank you/i)).toBeInTheDocument();
+  });
+
+  it("does not wait when the form has been open long enough", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const { container } = render(<ContactForm onSubmit={onSubmit} />);
+    fill();
+    await act(() => vi.advanceTimersByTimeAsync(MIN_FILL_MS + 500));
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0].elapsedMs).toBe(MIN_FILL_MS + 500);
+  });
+
+  it("ignores a second submit during the wait", async () => {
+    const onSubmit = vi.fn<ContactSubmit>().mockResolvedValue("ok");
+    const { container } = render(<ContactForm onSubmit={onSubmit} />);
+    fill();
+    const form = container.querySelector("form") as HTMLFormElement;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    await act(() => vi.advanceTimersByTimeAsync(MIN_FILL_MS));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 });

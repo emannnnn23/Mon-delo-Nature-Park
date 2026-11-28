@@ -21,6 +21,7 @@ import {
 import { MediaUploader } from "~/admin/components/MediaUploader";
 import { useToast } from "~/admin/components/Toast";
 import { useUnsavedChanges } from "~/admin/hooks/useUnsavedChanges";
+import { HIDDEN_CATEGORY_HINT, categoryLabel } from "~/admin/lib/categoryLabel";
 import { applySwap, neighbour, sortRows } from "~/admin/lib/reorder";
 import { Button } from "~/components/common/Button";
 import { MAX_GALLERY_IMAGES } from "~/lib/homeContent";
@@ -508,7 +509,7 @@ export function GalleryPage({
                   <option value={NO_CATEGORY}>No category</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {categoryLabel(c)}
                     </option>
                   ))}
                 </select>
@@ -517,6 +518,9 @@ export function GalleryPage({
             <p className="mt-3 max-w-xl text-sm text-ink-600">
               The homepage shows the first {MAX_GALLERY_IMAGES} published photos
               marked here.
+            </p>
+            <p className="mt-1 max-w-xl text-sm text-ink-600">
+              {HIDDEN_CATEGORY_HINT}
             </p>
 
             {shown.length === 0 ? (

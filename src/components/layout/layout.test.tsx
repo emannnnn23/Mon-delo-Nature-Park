@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, createRoutesStub } from "react-router";
 import { placeholders } from "../../content/placeholders";
 import type { Announcement, SiteSettings } from "../../types/content";
 import { AnnouncementStrip } from "./AnnouncementStrip";
@@ -153,15 +153,19 @@ describe("SiteFooter", () => {
     expect(screen.queryByRole("link", { name: "YouTube" })).toBeNull();
   });
 
-  it("uses the fallback tagline, the configured one when set, and the year", () => {
-    const { unmount } = inRouter(
+  it("shows no tagline when none is set, the configured one when set, and the year", () => {
+    const { container, unmount } = inRouter(
       <SiteFooter settings={settings} year={2031} />,
     );
-    expect(
-      screen.getByText("Nature. Relaxation. Unforgettable Moments."),
-    ).toBeInTheDocument();
+    expect(container.querySelector("p.italic")).toBeNull();
+    expect(screen.queryByText(/Nature\. Relaxation/)).toBeNull();
     expect(screen.getByText(/© 2031 Mondelos/)).toBeInTheDocument();
     unmount();
+    const empty = inRouter(
+      <SiteFooter settings={{ ...settings, tagline: "" }} year={2031} />,
+    );
+    expect(empty.container.querySelector("p.italic")).toBeNull();
+    empty.unmount();
     inRouter(
       <SiteFooter
         settings={{ ...settings, tagline: "Rest easy." }}
@@ -261,16 +265,23 @@ describe("AnnouncementStrip", () => {
 
 describe("PublicLayout", () => {
   it("has a skip link to #main and a main landmark with that id", () => {
-    inRouter(
-      <PublicLayout
-        settings={settings}
-        announcement={null}
-        overHero={false}
-        year={2031}
-      >
-        <p>page</p>
-      </PublicLayout>,
-    );
+    // The layout reads the router's navigation state, so it needs a data router.
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: () => (
+          <PublicLayout
+            settings={settings}
+            announcement={null}
+            overHero={false}
+            year={2031}
+          >
+            <p>page</p>
+          </PublicLayout>
+        ),
+      },
+    ]);
+    render(<Stub />);
     const skip = screen.getByRole("link", { name: "Skip to content" });
     expect(skip).toHaveAttribute("href", "#main");
     expect(screen.getByRole("main")).toHaveAttribute("id", "main");

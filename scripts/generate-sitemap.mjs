@@ -67,10 +67,35 @@ export function buildRobots(siteUrl) {
   return `User-agent: *\nDisallow: /admin\n\nSitemap: ${base}/sitemap.xml\n`;
 }
 
+/**
+ * The site URL to write into the sitemap and robots.txt. A production deploy
+ * must have one configured: the vercel.app default would put the wrong host
+ * in every canonical link and in the sitemap, and search engines would index
+ * it. Other builds (local, preview, CI) may use the default.
+ */
+export function siteUrlForBuild({ configured, vercelEnv }) {
+  const hasConfigured = typeof configured === "string" && configured.trim();
+  if (vercelEnv === "production" && !hasConfigured) {
+    throw new Error(
+      "VITE_SITE_URL is not set. A production build needs the public site URL (for example https://www.example.com): set VITE_SITE_URL in the Vercel project's environment variables and build again.",
+    );
+  }
+  return resolveSiteUrl(configured);
+}
+
 function main() {
   const buildDir = process.argv[2] ?? "build/client";
   const env = loadEnv("production", process.cwd(), "VITE_");
-  const siteUrl = resolveSiteUrl(process.argv[3] ?? env.VITE_SITE_URL);
+  let siteUrl;
+  try {
+    siteUrl = siteUrlForBuild({
+      configured: process.argv[3] ?? env.VITE_SITE_URL,
+      vercelEnv: process.env.VERCEL_ENV,
+    });
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
   const lastmod = new Date().toISOString().slice(0, 10);
 
   const paths = sitemapPaths(buildDir);

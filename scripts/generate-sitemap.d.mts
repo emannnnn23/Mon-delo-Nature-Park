@@ -5,3 +5,7 @@ export function buildSitemap(
   lastmod: string,
 ): string;
 export function buildRobots(siteUrl: string): string;
+export function siteUrlForBuild(options: {
+  configured: string | undefined;
+  vercelEnv: string | undefined;
+}): string;

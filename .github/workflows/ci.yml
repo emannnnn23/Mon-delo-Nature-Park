@@ -80,8 +80,11 @@ jobs:
       # No Supabase env is set here, so the build exercises the placeholder fallback.
       - run: npm run build
       # Checks the static site just built (meta, JSON-LD, sitemap, robots, admin
-      # code split). The Unit tests job has no build folder, so there it skips.
+      # code split). The Unit tests job has no build folder, so there it skips;
+      # here REQUIRE_BUILD_OUTPUT makes a missing build an error, not a skip.
       - run: npx vitest run tests/build
+        env:
+          REQUIRE_BUILD_OUTPUT: "1"
 
   dependency-audit:
     name: Dependency audit
